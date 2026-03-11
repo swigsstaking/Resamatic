@@ -1,0 +1,35 @@
+<section class="section section-hero" data-section="hero">
+  <div class="container hero-two-col">
+    <div class="hero-text-col">
+      <h1 data-editable="headline">{{headline}}</h1>
+      {{#if subheadline}}<p class="hero-sub" data-editable="subheadline">{{subheadline}}</p>{{/if}}
+      {{#if bulletPoints.length}}
+        <ul class="hero-bullets">
+          {{#each bulletPoints}}
+            <li>{{#if this.value}}{{this.value}}{{else}}{{this}}{{/if}}</li>
+          {{/each}}
+        </ul>
+      {{/if}}
+      {{#if ctaText}}<a href="{{ctaUrl}}" class="btn btn-accent">{{ctaText}}</a>{{/if}}
+    </div>
+    <div class="hero-image-col">
+      {{#if backgroundUrl}}
+        <img
+          src="{{backgroundUrl}}"
+          {{#if backgroundMediaId_srcset}}srcset="{{backgroundMediaId_srcset}}"{{/if}}
+          sizes="(max-width: 768px) 100vw, 50vw"
+          {{#if backgroundMediaId_width}}width="{{backgroundMediaId_width}}"{{/if}}
+          {{#if backgroundMediaId_height}}height="{{backgroundMediaId_height}}"{{/if}}
+          alt="{{backgroundMediaId_alt}}"
+          class="hero-img"
+          loading="eager"
+          data-editable="backgroundMediaId"
+        >
+      {{else}}
+        <div class="img-placeholder hero-img-placeholder" data-editable="backgroundMediaId">
+          <span style="color:#9ca3af;font-size:0.875rem;">Cliquez pour ajouter une image</span>
+        </div>
+      {{/if}}
+    </div>
+  </div>
+</section>

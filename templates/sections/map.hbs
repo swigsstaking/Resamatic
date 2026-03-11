@@ -1,0 +1,22 @@
+<section class="section section-map" data-section="map">
+  <div class="container">
+    {{#if title}}<h2 class="section-title" data-editable="title">{{title}}</h2>{{/if}}
+    {{#if body}}<div class="map-body body-text" data-editable="body">{{{body}}}</div>{{/if}}
+    <div class="map-layout">
+      <div class="map-info">
+        {{#if ../logoUrl}}
+          <img src="{{../logoUrl}}" alt="Logo" class="map-logo">
+        {{/if}}
+        {{#if address}}<p class="map-address" data-editable="address">{{address}}</p>{{/if}}
+        {{#if hours}}<p class="map-hours" data-editable="hours">{{hours}}</p>{{/if}}
+        {{#if phone}}<p class="map-contact"><a href="tel:{{phone}}">{{phone}}</a></p>{{/if}}
+        {{#if email}}<p class="map-contact"><a href="mailto:{{email}}">{{email}}</a></p>{{/if}}
+      </div>
+      {{#if embedUrl}}
+        <div class="map-embed">
+          <iframe src="{{embedUrl}}" width="100%" height="400" style="border:0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Localisation"></iframe>
+        </div>
+      {{/if}}
+    </div>
+  </div>
+</section>

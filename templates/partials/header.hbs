@@ -1,0 +1,12 @@
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo-link">
+      {{#if site.design.logoMediaId}}
+        <img src="images/{{site.design.logoMediaId.filename}}" alt="{{site.business.name}} - Logo" class="logo" width="180" height="60" loading="eager">
+      {{else}}
+        <span class="logo-text">{{site.business.name}}</span>
+      {{/if}}
+    </a>
+    <a href="{{#if site.headerCtaUrl}}{{site.headerCtaUrl}}{{else}}#contact{{/if}}" class="header-cta">{{#if site.headerCtaText}}{{site.headerCtaText}}{{else}}OFFRE d&eacute;couverte{{/if}}</a>
+  </div>
+</header>

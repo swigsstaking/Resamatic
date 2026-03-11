@@ -1,0 +1,23 @@
+<section class="section section-testimonials" data-section="testimonials">
+  <div class="container">
+    {{#if title}}<h2 class="section-title" data-editable="title">{{title}}</h2>{{/if}}
+    <div class="testimonials-grid">
+      {{#each items}}
+        <div class="testimonial-card">
+          <span class="testimonial-quote-mark">"</span>
+          <div class="testimonial-stars">
+            {{#times this.rating}}<span class="star">&#9733;</span>{{/times}}
+          </div>
+          <blockquote data-editable="items.{{@index}}.text">{{this.text}}</blockquote>
+          <cite>
+            <span class="testimonial-avatar">{{firstLetter this.name}}</span>
+            <div>
+              <strong>{{this.name}}</strong>
+              {{#if this.location}}<span>{{this.location}}</span>{{/if}}
+            </div>
+          </cite>
+        </div>
+      {{/each}}
+    </div>
+  </div>
+</section>

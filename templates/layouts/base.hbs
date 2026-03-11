@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{page.seo.title}}{{#if site.seoDefaults.titleSuffix}} {{site.seoDefaults.titleSuffix}}{{/if}}</title>
+  <meta name="description" content="{{page.seo.description}}">
+  {{#if page.seo.keywords}}<meta name="keywords" content="{{#each page.seo.keywords}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}">{{/if}}
+  {{#if page.seo.canonicalUrl}}<link rel="canonical" href="{{page.seo.canonicalUrl}}">{{/if}}
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="{{page.seo.title}}">
+  <meta property="og:description" content="{{page.seo.description}}">
+  <meta property="og:type" content="website">
+  {{#if site.domain}}<meta property="og:url" content="https://{{site.domain}}/{{#unless page.isMainHomepage}}{{page.slug}}.html{{/unless}}">{{/if}}
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">{{{jsonLd}}}</script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family={{encodeURI site.design.fontHeading}}:wght@400;700&family={{encodeURI site.design.fontBody}}:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Favicon -->
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+
+  <!-- Critical CSS inline -->
+  <style>
+    {{{cssVars}}}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+    body{font-family:var(--font-body);color:var(--color-text);background:var(--color-bg);line-height:1.6}
+    h1,h2,h3,h4{font-family:var(--font-heading);line-height:1.2;color:var(--color-primary)}
+    img{max-width:100%;height:auto;display:block}
+    a{color:var(--color-accent);text-decoration:none}
+    .container{max-width:1200px;margin:0 auto;padding:0 1.5rem}
+  </style>
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="main.css">
+</head>
+<body>
+  {{> header}}
+
+  <main>
+    {{{sections}}}
+  </main>
+
+  {{> footer}}
+
+  {{#ifEnabled site.posthog.enabled}}
+  {{> cookie-consent}}
+  <script>
+    window.__posthogKey = '{{site.posthog.apiKey}}';
+    window.__posthogHost = '{{site.posthog.apiHost}}';
+    function initPosthog() {
+      !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys onFeatureFlags onSessionId setPersonProperties".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+      posthog.init(window.__posthogKey, {api_host: window.__posthogHost, persistence: 'localStorage'});
+    }
+  </script>
+  {{/ifEnabled}}
+
+  <!-- Inline edit bridge (for admin preview) -->
+  <script>
+    if (window.parent !== window) {
+      // === Nav link interception: switch editor page on click ===
+      document.querySelectorAll('a[href]').forEach(function(a) {
+        var href = a.getAttribute('href');
+        if (href && href.endsWith('.html')) {
+          a.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.parent.postMessage({
+              type: 'resamatic:navigate',
+              href: href,
+            }, '*');
+          });
+        }
+      });
+
+      // === Click-to-edit: hover highlights + click sends message to parent ===
+      document.querySelectorAll('[data-editable]').forEach(function(el) {
+        el.style.cursor = 'pointer';
+        el.style.position = el.style.position || 'relative';
+        el.addEventListener('mouseenter', function() {
+          el.style.outline = '2px dashed rgba(200,169,126,0.7)';
+          el.style.outlineOffset = '3px';
+        });
+        el.addEventListener('mouseleave', function() {
+          el.style.outline = '';
+          el.style.outlineOffset = '';
+        });
+        el.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var section = el.closest('[data-section]');
+          window.parent.postMessage({
+            type: 'resamatic:edit',
+            field: el.dataset.editable,
+            sectionType: section ? section.dataset.section : '',
+            isMedia: el.dataset.editable.indexOf('MediaId') !== -1,
+          }, '*');
+        });
+      });
+
+      // === Real-time updates from parent editor ===
+      window.addEventListener('message', function(e) {
+        var d = e.data;
+        if (!d || !d.type) return;
+
+        // Update text content in preview
+        if (d.type === 'resamatic:updateField') {
+          var section = document.querySelector('[data-section="' + d.sectionType + '"]');
+          if (!section) return;
+          var el = section.querySelector('[data-editable="' + d.field + '"]');
+          if (el) {
+            if (d.field === 'body') { el.innerHTML = d.value; }
+            else { el.textContent = d.value; }
+          }
+        }
+
+        // Toggle section visibility
+        if (d.type === 'resamatic:toggleSection') {
+          var sec = document.querySelector('[data-section="' + d.sectionType + '"]');
+          if (sec) {
+            sec.style.display = d.visible ? '' : 'none';
+          }
+        }
+
+        // Update section colors
+        if (d.type === 'resamatic:updateStyle') {
+          var sec2 = document.querySelector('[data-section="' + d.sectionType + '"]');
+          if (sec2) {
+            sec2.style.backgroundColor = d.backgroundColor || '';
+            sec2.style.color = d.textColor || '';
+            // Also update headings color when section has custom text color
+            if (d.textColor) {
+              sec2.querySelectorAll('h1,h2,h3,h4').forEach(function(h) { h.style.color = d.textColor; });
+            } else {
+              sec2.querySelectorAll('h1,h2,h3,h4').forEach(function(h) { h.style.color = ''; });
+            }
+          }
+        }
+
+        // Highlight selected section
+        if (d.type === 'resamatic:selectSection') {
+          document.querySelectorAll('[data-section]').forEach(function(s) {
+            s.style.boxShadow = '';
+          });
+          var target = document.querySelector('[data-section="' + d.sectionType + '"]');
+          if (target) {
+            target.style.boxShadow = 'inset 0 0 0 2px rgba(200,169,126,0.5)';
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      });
+
+      // Tell parent we're ready
+      window.parent.postMessage({ type: 'resamatic:ready' }, '*');
+    }
+  </script>
+</body>
+</html>

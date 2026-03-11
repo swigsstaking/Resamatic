@@ -1,0 +1,15 @@
+<section class="section section-faq" data-section="faq">
+  <div class="container">
+    {{#if title}}<h2 class="section-title" data-editable="title">{{title}}</h2>{{/if}}
+    <div class="faq-list">
+      {{#each items}}
+        <details class="faq-item">
+          <summary data-editable="items.{{@index}}.question">{{this.question}}</summary>
+          <div class="faq-answer" data-editable="items.{{@index}}.answer">
+            <p>{{this.answer}}</p>
+          </div>
+        </details>
+      {{/each}}
+    </div>
+  </div>
+</section>

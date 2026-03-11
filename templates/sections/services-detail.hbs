@@ -1,0 +1,25 @@
+<section class="section section-services-detail" data-section="services-detail">
+  <div class="container">
+    {{#if title}}<h2 class="section-title" data-editable="title">{{title}}</h2>{{/if}}
+    {{#each services}}
+      <div class="service-detail {{#if (isEven @index)}}img-right{{else}}img-left{{/if}}">
+        {{#if this.imageUrl}}
+          <div class="service-image">
+            <img src="{{this.imageUrl}}" {{#if this.imageMediaId_srcset}}srcset="{{this.imageMediaId_srcset}}"{{/if}} sizes="(max-width: 768px) 100vw, 45vw" alt="{{this.imageMediaId_alt}}" loading="lazy">
+          </div>
+        {{else}}
+          <div class="service-image">
+            <div class="img-placeholder" data-editable="services.{{@index}}.imageMediaId">
+              <span style="color:#9ca3af;font-size:0.875rem;">Cliquez pour ajouter une image</span>
+            </div>
+          </div>
+        {{/if}}
+        <div class="service-info">
+          <h3 data-editable="services.{{@index}}.name">{{this.name}}</h3>
+          <p data-editable="services.{{@index}}.description">{{this.description}}</p>
+          {{#if this.price}}<span class="service-price">{{this.price}}</span>{{/if}}
+        </div>
+      </div>
+    {{/each}}
+  </div>
+</section>

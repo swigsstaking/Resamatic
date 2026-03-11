@@ -1,0 +1,28 @@
+<section class="section section-services-grid" data-section="services-grid">
+  <div class="container">
+    {{#if title}}<h2 class="section-title" data-editable="title">{{title}}</h2>{{/if}}
+    {{#if subtitle}}<p class="section-subtitle" data-editable="subtitle">{{subtitle}}</p>{{/if}}
+    <div class="services-grid">
+      {{#each services}}
+        <div class="service-card">
+          {{#if this.imageUrl}}
+            <div class="service-card-img">
+              <img
+                src="{{this.imageUrl}}"
+                {{#if this.imageMediaId_srcset}}srcset="{{this.imageMediaId_srcset}}"{{/if}}
+                sizes="(max-width: 768px) 50vw, 25vw"
+                alt="{{this.name}}"
+                loading="lazy"
+              >
+            </div>
+          {{/if}}
+          <h3 data-editable="services.{{@index}}.name">{{this.name}}</h3>
+          {{#if this.shortDescription}}<p data-editable="services.{{@index}}.shortDescription">{{this.shortDescription}}</p>{{/if}}
+          {{#if this.linkUrl}}
+            <a href="{{this.linkUrl}}" class="service-card-link">{{this.name}} &rarr;</a>
+          {{/if}}
+        </div>
+      {{/each}}
+    </div>
+  </div>
+</section>

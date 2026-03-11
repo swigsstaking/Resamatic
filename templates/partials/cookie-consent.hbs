@@ -1,0 +1,31 @@
+<div id="cookie-consent" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--color-primary);color:#fff;padding:1rem 1.5rem;z-index:9999;box-shadow:0 -2px 10px rgba(0,0,0,0.2)">
+  <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+    <p style="margin:0;flex:1;min-width:200px;font-size:0.9rem">
+      Ce site utilise des cookies pour am&eacute;liorer votre exp&eacute;rience et analyser le trafic.
+      <a href="politique-confidentialite.html" style="color:var(--color-accent);text-decoration:underline">En savoir plus</a>
+    </p>
+    <div style="display:flex;gap:0.5rem">
+      <button onclick="declineCookies()" style="padding:0.5rem 1rem;background:transparent;border:1px solid #fff;color:#fff;border-radius:4px;cursor:pointer">Refuser</button>
+      <button onclick="acceptCookies()" style="padding:0.5rem 1rem;background:var(--color-accent);border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:600">Accepter</button>
+    </div>
+  </div>
+</div>
+<script>
+  (function() {
+    var consent = localStorage.getItem('cookie_consent');
+    if (consent === 'accepted') {
+      if (typeof initPosthog === 'function') initPosthog();
+    } else if (consent !== 'declined') {
+      document.getElementById('cookie-consent').style.display = 'block';
+    }
+  })();
+  function acceptCookies() {
+    localStorage.setItem('cookie_consent', 'accepted');
+    document.getElementById('cookie-consent').style.display = 'none';
+    if (typeof initPosthog === 'function') initPosthog();
+  }
+  function declineCookies() {
+    localStorage.setItem('cookie_consent', 'declined');
+    document.getElementById('cookie-consent').style.display = 'none';
+  }
+</script>

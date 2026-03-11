@@ -1,0 +1,36 @@
+<section class="section section-description" data-section="description">
+  <div class="container two-col {{#if (eq imagePosition 'left')}}img-left{{else}}img-right{{/if}}">
+    <div class="col-text">
+      {{#if title}}<h2 data-editable="title">{{title}}</h2>{{/if}}
+      <div class="body-text" data-editable="body">{{{body}}}</div>
+      {{#if bulletPoints.length}}
+        <ul class="bullet-list">
+          {{#each bulletPoints}}
+            <li>{{#if this.value}}{{this.value}}{{else}}{{this}}{{/if}}</li>
+          {{/each}}
+        </ul>
+      {{/if}}
+      {{#if ctaText}}<a href="{{ctaUrl}}" class="btn btn-accent desc-cta">{{ctaText}}</a>{{/if}}
+    </div>
+    {{#if imageUrl}}
+      <div class="col-image">
+        <img
+          src="{{imageUrl}}"
+          {{#if imageMediaId_srcset}}srcset="{{imageMediaId_srcset}}"{{/if}}
+          sizes="(max-width: 768px) 100vw, 50vw"
+          {{#if imageMediaId_width}}width="{{imageMediaId_width}}"{{/if}}
+          {{#if imageMediaId_height}}height="{{imageMediaId_height}}"{{/if}}
+          alt="{{imageMediaId_alt}}"
+          loading="lazy"
+          data-editable="imageMediaId"
+        >
+      </div>
+    {{else}}
+      <div class="col-image">
+        <div class="img-placeholder" data-editable="imageMediaId">
+          <span style="color:#9ca3af;font-size:0.875rem;">Cliquez pour ajouter une image</span>
+        </div>
+      </div>
+    {{/if}}
+  </div>
+</section>

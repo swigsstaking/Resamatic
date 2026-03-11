@@ -1,0 +1,41 @@
+<section class="section section-why-us" data-section="why-us">
+  <div class="container why-us-two-col">
+    {{#if imageUrl}}
+      <div class="why-us-image-col">
+        <img
+          src="{{imageUrl}}"
+          {{#if imageMediaId_srcset}}srcset="{{imageMediaId_srcset}}"{{/if}}
+          sizes="(max-width: 768px) 100vw, 50vw"
+          {{#if imageMediaId_width}}width="{{imageMediaId_width}}"{{/if}}
+          {{#if imageMediaId_height}}height="{{imageMediaId_height}}"{{/if}}
+          alt="{{imageMediaId_alt}}"
+          loading="lazy"
+          data-editable="imageMediaId"
+          class="why-us-img"
+        >
+      </div>
+    {{else}}
+      <div class="why-us-image-col">
+        <div class="img-placeholder" data-editable="imageMediaId">
+          <span style="color:#9ca3af;font-size:0.875rem;">Cliquez pour ajouter une image</span>
+        </div>
+      </div>
+    {{/if}}
+    <div class="why-us-text-col">
+      {{#if title}}<h2 data-editable="title">{{title}}</h2>{{/if}}
+      {{#if subtitle}}<p class="why-us-subtitle" data-editable="subtitle">{{subtitle}}</p>{{/if}}
+      {{#if body}}<div class="why-us-body" data-editable="body">{{{body}}}</div>{{/if}}
+      {{#if reasons.length}}
+        <ul class="why-us-list">
+          {{#each reasons}}
+            <li>
+              <strong data-editable="reasons.{{@index}}.title">{{this.title}}</strong>
+              {{#if this.text}}<span data-editable="reasons.{{@index}}.text">{{this.text}}</span>{{/if}}
+            </li>
+          {{/each}}
+        </ul>
+      {{/if}}
+      {{#if ctaText}}<a href="{{ctaUrl}}" class="btn btn-accent">{{ctaText}}</a>{{/if}}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,50 @@
+import Site from '../models/Site.js';
+import * as aiService from '../services/ai.service.js';
+
+export const generatePage = async (req, res, next) => {
+  try {
+    const { siteId, keyword, serviceFocus, tone } = req.body;
+    if (!siteId || !keyword) {
+      return res.status(400).json({ error: 'siteId and keyword required' });
+    }
+
+    const site = await Site.findById(siteId).lean();
+    if (!site) return res.status(404).json({ error: 'Site not found' });
+
+    const content = await aiService.generatePageContent(site, { keyword, serviceFocus, tone });
+    res.json({ content });
+  } catch (err) { next(err); }
+};
+
+export const generateSeo = async (req, res, next) => {
+  try {
+    const { siteId, pageContent } = req.body;
+    const site = await Site.findById(siteId).lean();
+    if (!site) return res.status(404).json({ error: 'Site not found' });
+
+    const seo = await aiService.generateSeoMetadata(site, pageContent);
+    res.json({ seo });
+  } catch (err) { next(err); }
+};
+
+export const rewrite = async (req, res, next) => {
+  try {
+    const { text, instruction } = req.body;
+    if (!text || !instruction) {
+      return res.status(400).json({ error: 'text and instruction required' });
+    }
+
+    const result = await aiService.rewriteText(text, instruction);
+    res.json({ text: result });
+  } catch (err) { next(err); }
+};
+
+export const generateAlt = async (req, res, next) => {
+  try {
+    const { description } = req.body;
+    if (!description) return res.status(400).json({ error: 'description required' });
+
+    const alt = await aiService.generateAltText(description);
+    res.json({ alt });
+  } catch (err) { next(err); }
+};
