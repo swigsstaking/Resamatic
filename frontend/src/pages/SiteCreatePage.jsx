@@ -265,7 +265,7 @@ export default function SiteCreatePage() {
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Listez vos services principaux (séparés par des virgules)</label>
-              <input value={form.business.services} onChange={e => updateField('business.services', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="Ex: Soin visage, Épilation laser, Massage relaxant, Manucure" />
+              <textarea value={form.business.services} onChange={e => updateField('business.services', e.target.value)} rows={2} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent resize-y" placeholder="Ex: Soin visage, Épilation laser, Massage relaxant, Manucure" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Votre clientèle cible</label>
@@ -283,7 +283,7 @@ export default function SiteCreatePage() {
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Ce qui vous différencie de la concurrence</label>
-              <input value={form.business.uniqueSellingPoints} onChange={e => updateField('business.uniqueSellingPoints', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="Ex: 10 ans d'expérience, produits bio, résultats garantis" />
+              <textarea value={form.business.uniqueSellingPoints} onChange={e => updateField('business.uniqueSellingPoints', e.target.value)} rows={2} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent resize-y" placeholder="Ex: 10 ans d'expérience, produits bio, résultats garantis" />
             </div>
 
             <div className="col-span-2 border-t pt-4 mt-2">
@@ -387,39 +387,50 @@ export default function SiteCreatePage() {
                   </button>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  value={page.title}
-                  onChange={e => {
-                    const pages = [...form.pages];
-                    pages[idx] = { ...pages[idx], title: e.target.value };
-                    setForm(prev => ({ ...prev, pages }));
-                    if (errors[`page.${idx}`]) setErrors(prev => { const e = { ...prev }; delete e[`page.${idx}`]; return e; });
-                  }}
-                  className="px-3 py-2 border rounded-lg text-sm"
-                  placeholder="Titre de la page"
-                />
-                <input
-                  value={page.keyword}
-                  onChange={e => {
-                    const pages = [...form.pages];
-                    pages[idx] = { ...pages[idx], keyword: e.target.value };
-                    setForm(prev => ({ ...prev, pages }));
-                    if (errors[`page.${idx}`]) setErrors(prev => { const e = { ...prev }; delete e[`page.${idx}`]; return e; });
-                  }}
-                  className="px-3 py-2 border rounded-lg text-sm"
-                  placeholder="Mot-clé cible"
-                />
-                <input
-                  value={page.serviceFocus}
-                  onChange={e => {
-                    const pages = [...form.pages];
-                    pages[idx] = { ...pages[idx], serviceFocus: e.target.value };
-                    setForm(prev => ({ ...prev, pages }));
-                  }}
-                  className="px-3 py-2 border rounded-lg text-sm"
-                  placeholder="Service principal (optionnel)"
-                />
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-0.5">Titre de la page</label>
+                  <input
+                    value={page.title}
+                    onChange={e => {
+                      const pages = [...form.pages];
+                      pages[idx] = { ...pages[idx], title: e.target.value };
+                      setForm(prev => ({ ...prev, pages }));
+                      if (errors[`page.${idx}`]) setErrors(prev => { const e = { ...prev }; delete e[`page.${idx}`]; return e; });
+                    }}
+                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                    placeholder="Ex: Stratégies marketing pour indépendants et PME"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-0.5">Mot-clé cible</label>
+                    <input
+                      value={page.keyword}
+                      onChange={e => {
+                        const pages = [...form.pages];
+                        pages[idx] = { ...pages[idx], keyword: e.target.value };
+                        setForm(prev => ({ ...prev, pages }));
+                        if (errors[`page.${idx}`]) setErrors(prev => { const e = { ...prev }; delete e[`page.${idx}`]; return e; });
+                      }}
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                      placeholder="Ex: consultant marketing Lausanne"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-0.5">Service principal (optionnel)</label>
+                    <input
+                      value={page.serviceFocus}
+                      onChange={e => {
+                        const pages = [...form.pages];
+                        pages[idx] = { ...pages[idx], serviceFocus: e.target.value };
+                        setForm(prev => ({ ...prev, pages }));
+                      }}
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                      placeholder="Ex: Conseil en stratégie marketing"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           ))}
