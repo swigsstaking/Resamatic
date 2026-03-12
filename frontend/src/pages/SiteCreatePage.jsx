@@ -405,7 +405,7 @@ export default function SiteCreatePage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-0.5">Mot-clé cible</label>
-                    <input
+                    <textarea
                       value={page.keyword}
                       onChange={e => {
                         const pages = [...form.pages];
@@ -413,21 +413,25 @@ export default function SiteCreatePage() {
                         setForm(prev => ({ ...prev, pages }));
                         if (errors[`page.${idx}`]) setErrors(prev => { const e = { ...prev }; delete e[`page.${idx}`]; return e; });
                       }}
-                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                      rows={1}
+                      className="w-full px-3 py-2 border rounded-lg text-sm resize-none field-autogrow"
                       placeholder="Ex: consultant marketing Lausanne"
+                      onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-0.5">Service principal (optionnel)</label>
-                    <input
+                    <textarea
                       value={page.serviceFocus}
                       onChange={e => {
                         const pages = [...form.pages];
                         pages[idx] = { ...pages[idx], serviceFocus: e.target.value };
                         setForm(prev => ({ ...prev, pages }));
                       }}
-                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                      rows={1}
+                      className="w-full px-3 py-2 border rounded-lg text-sm resize-none field-autogrow"
                       placeholder="Ex: Conseil en stratégie marketing"
+                      onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
                     />
                   </div>
                 </div>

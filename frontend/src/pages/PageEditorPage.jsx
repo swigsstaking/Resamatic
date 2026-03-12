@@ -199,6 +199,9 @@ export default function PageEditorPage() {
       setDirty(false);
       if (shouldReload) {
         setBuilding(true);
+        // Save iframe scroll position before rebuild
+        let savedScrollY = 0;
+        try { savedScrollY = iframeRef.current?.contentWindow?.scrollY || 0; } catch {}
         await buildApi.trigger(siteId);
         let attempts = 0;
         const poll = setInterval(async () => {
@@ -210,6 +213,11 @@ export default function PageEditorPage() {
               setBuilding(false);
               if (iframeRef.current) {
                 setIframeReady(false);
+                const restoreScroll = () => {
+                  try { iframeRef.current.contentWindow.scrollTo(0, savedScrollY); } catch {}
+                  iframeRef.current.removeEventListener('load', restoreScroll);
+                };
+                iframeRef.current.addEventListener('load', restoreScroll);
                 iframeRef.current.src = iframeRef.current.src;
               }
             }
@@ -643,22 +651,15 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
           <Sparkles size={8} /> IA
         </button>
       </div>
-      {opts.multiline ? (
-        <textarea
-          value={d[field] || ''}
-          onChange={e => onChange(idx, field, e.target.value)}
-          placeholder={opts.placeholder}
-          rows={3}
-          className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs resize-y focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
-        />
-      ) : (
-        <input
-          value={d[field] || ''}
-          onChange={e => onChange(idx, field, e.target.value)}
-          placeholder={opts.placeholder}
-          className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
-        />
-      )}
+      <textarea
+        value={d[field] || ''}
+        onChange={e => onChange(idx, field, e.target.value)}
+        placeholder={opts.placeholder}
+        rows={opts.multiline ? 3 : 1}
+        className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs resize-none focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none overflow-hidden"
+        onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+        ref={el => { if (el && el.value) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
+      />
     </div>
   );
 
@@ -668,7 +669,7 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
       <div className="flex gap-1.5">
         <button
           onClick={() => onMediaPick((mediaId) => onChange(idx, field, mediaId))}
-          className={`flex-1 px-2.5 py-2 border-2 border-dashed rounded-lg text-xs transition-all flex items-center justify-center gap-1.5 ${
+          className={`flex-1 h-10 border-2 border-dashed rounded-lg text-xs transition-all flex items-center justify-center gap-1.5 ${
             d[field]
               ? 'border-green-300 text-green-600 bg-green-50'
               : 'border-gray-200 text-gray-400 hover:border-accent hover:text-accent'
@@ -680,8 +681,8 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
         {d[field] && (
           <button
             onClick={() => onChange(idx, field, null)}
-            className="px-2 py-2 border-2 border-dashed border-red-200 rounded-lg text-red-400 hover:border-red-400 hover:text-red-600 hover:bg-red-50 transition-all"
-            title="Supprimer l'image"
+            className="h-10 w-10 shrink-0 border-2 border-dashed border-red-200 rounded-lg text-red-400 hover:border-red-400 hover:text-red-600 hover:bg-red-50 transition-all flex items-center justify-center"
+            aria-label="Supprimer l'image"
           >
             <X size={12} />
           </button>
@@ -737,7 +738,7 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
                   {fType === 'image' ? (
                     <button
                       onClick={() => onMediaPick((mediaId) => onChange(idx, `${field}.${i}.${key}`, mediaId))}
-                      className={`w-full px-2 py-1.5 border-2 border-dashed rounded text-[10px] flex items-center justify-center gap-1 transition-all ${
+                      className={`w-full h-8 border-2 border-dashed rounded text-[10px] flex items-center justify-center gap-1 transition-all ${
                         item[key]
                           ? 'border-green-300 text-green-600 bg-green-50'
                           : 'border-gray-200 text-gray-400 hover:border-accent hover:text-accent'
@@ -746,10 +747,8 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
                       <ImageIcon size={10} />
                       {item[key] ? 'Changer' : 'Image'}
                     </button>
-                  ) : multiline ? (
-                    <textarea value={item[key] || ''} onChange={e => onChange(idx, `${field}.${i}.${key}`, e.target.value)} placeholder={placeholder} rows={2} className="w-full px-2 py-1 border border-gray-200 rounded text-[11px] resize-y focus:border-accent outline-none" />
                   ) : (
-                    <input value={item[key] || ''} onChange={e => onChange(idx, `${field}.${i}.${key}`, e.target.value)} placeholder={placeholder} className="w-full px-2 py-1 border border-gray-200 rounded text-[11px] focus:border-accent outline-none" />
+                    <textarea value={item[key] || ''} onChange={e => onChange(idx, `${field}.${i}.${key}`, e.target.value)} placeholder={placeholder} rows={multiline ? 2 : 1} className="w-full px-2 py-1 border border-gray-200 rounded text-[11px] resize-none overflow-hidden focus:border-accent outline-none" onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} ref={el => { if (el && el.value) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }} />
                   )}
                 </div>
               ))}
