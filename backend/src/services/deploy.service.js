@@ -19,10 +19,11 @@ function runCmd(cmd) {
   return execAsync(`ssh -o StrictHostKeyChecking=no ${user}@${host} "${cmd}"`);
 }
 
-function runSudo(cmd) {
+function runSudo(cmd, opts = {}) {
   const { isLocal, user, host } = getConfig();
-  if (isLocal) return execAsync(`echo 'AagD2jCusi' | sudo -S bash -c '${cmd}'`);
-  return execAsync(`ssh -o StrictHostKeyChecking=no ${user}@${host} "echo 'AagD2jCusi' | sudo -S bash -c '${cmd}'"`);
+  const execOpts = { timeout: opts.timeout || 60000 };
+  if (isLocal) return execAsync(`echo 'AagD2jCusi' | sudo -S bash -c '${cmd}'`, execOpts);
+  return execAsync(`ssh -o StrictHostKeyChecking=no ${user}@${host} "echo 'AagD2jCusi' | sudo -S bash -c '${cmd}'"`, execOpts);
 }
 
 function generateNginxConfig(domain) {
@@ -84,27 +85,51 @@ export async function deploySite(siteId) {
       );
     }
 
-    // 3. Write Nginx config
-    const nginxConfig = generateNginxConfig(site.domain);
+    // 3. Write Nginx config — only if no config exists yet (preserve SSL configs)
     const configPath = `/etc/nginx/sites-available/${site.domain}`;
     const enabledPath = `/etc/nginx/sites-enabled/${site.domain}`;
 
-    // Write config via temp file
-    await runCmd(`cat > /tmp/nginx-${site.slug}.conf << 'NGINXEOF'\n${nginxConfig}\nNGINXEOF`);
-    await runSudo(`mv /tmp/nginx-${site.slug}.conf ${configPath}`);
-    await runSudo(`ln -sf ${configPath} ${enabledPath}`);
+    const { stdout: configExists } = await runSudo(
+      `test -f ${configPath} && echo EXISTS || echo MISSING`
+    );
+
+    if (configExists.trim().includes('MISSING')) {
+      const nginxConfig = generateNginxConfig(site.domain);
+      await runCmd(`cat > /tmp/nginx-${site.slug}.conf << 'NGINXEOF'\n${nginxConfig}\nNGINXEOF`);
+      await runSudo(`mv /tmp/nginx-${site.slug}.conf ${configPath}`);
+      await runSudo(`ln -sf ${configPath} ${enabledPath}`);
+      console.log('[deploy] Created new nginx config for', site.domain);
+    } else {
+      console.log('[deploy] Nginx config already exists, preserving (SSL safe)');
+    }
 
     // 4. Test and reload Nginx
     await runSudo('nginx -t');
     await runSudo('systemctl reload nginx');
 
-    // 5. SSL with Certbot (non-interactive, skip if already configured or local domain)
+    // 5. SSL with Certbot — only if no cert exists yet
     try {
-      await runSudo(
-        `certbot --nginx -d ${site.domain} -d www.${site.domain} --non-interactive --agree-tos --email admin@swigs.ch --redirect 2>/dev/null || true`
+      const { stdout: certCheck } = await runSudo(
+        `test -d /etc/letsencrypt/live/${site.domain} && echo EXISTS || echo MISSING`
       );
-    } catch {
-      // Certbot may fail for local/internal domains — not critical
+      if (certCheck.trim().includes('MISSING')) {
+        const domainParts = site.domain.split('.');
+        const isSubdomain = domainParts.length > 2;
+        const certbotDomains = isSubdomain
+          ? `-d ${site.domain}`
+          : `-d ${site.domain} -d www.${site.domain}`;
+
+        const { stdout, stderr } = await runSudo(
+          `certbot --nginx ${certbotDomains} --non-interactive --agree-tos --email admin@swigs.ch --redirect 2>&1`,
+          { timeout: 120000 }
+        );
+        console.log('[deploy] Certbot output:', stdout || stderr);
+      } else {
+        console.log('[deploy] SSL cert already exists, reusing');
+      }
+    } catch (certErr) {
+      console.error('[deploy] Certbot failed:', certErr.message);
+      // Don't fail the whole deploy, but log it
     }
 
     // 6. Update site status

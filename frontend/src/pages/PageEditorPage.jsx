@@ -124,8 +124,8 @@ export default function PageEditorPage() {
       const sectionType = sections[sectionIdx].type;
       if (keys.length === 1 && typeof value === 'string' && !field.endsWith('MediaId') && field !== 'style') {
         postToIframe({ type: 'resamatic:updateField', sectionType, field, value });
-      } else {
-        // Image changes, style changes, list changes, etc. need a full rebuild+reload
+      } else if (field !== 'style') {
+        // Image changes, list changes, etc. need a full rebuild+reload
         needsFullReload.current = true;
       }
       if (field === 'style' && typeof value === 'object') {

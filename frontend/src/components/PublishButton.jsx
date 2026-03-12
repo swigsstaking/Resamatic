@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Rocket, Loader, CheckCircle, AlertCircle, X, Copy, Check, Globe, ExternalLink } from 'lucide-react';
+import { Rocket, Loader, CheckCircle, AlertCircle, X, Copy, Check, Globe, ExternalLink, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { deployApi } from '../services/api';
 import useSiteStore from '../stores/siteStore';
@@ -20,11 +20,20 @@ export default function PublishButton({ siteId, status, domain, compact = false 
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
 
+  const handleDomainChange = async (newDomain) => {
+    try {
+      const { updateSite, fetchSites: refetch } = useSiteStore.getState();
+      await updateSite(siteId, { domain: newDomain });
+      refetch();
+      toast.success('Domaine mis à jour');
+    } catch { toast.error('Erreur lors de la mise à jour du domaine'); }
+  };
+
   const handlePublishClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (!siteDomain) {
-      toast.error('Configurez un domaine dans les paramètres du site avant de publier');
+      setShowDnsModal(true);
       return;
     }
     setShowDnsModal(true);
@@ -94,6 +103,7 @@ export default function PublishButton({ siteId, status, domain, compact = false 
           isRepublish={publishStatus === 'published'}
           onConfirm={handleConfirmPublish}
           onClose={() => setShowDnsModal(false)}
+          onDomainChange={handleDomainChange}
         />
       )}
     </>
@@ -130,7 +140,22 @@ function CopyRow({ label, value }) {
   );
 }
 
-function DnsModal({ domain, serverIp, isRepublish, onConfirm, onClose }) {
+function DnsModal({ domain, serverIp, isRepublish, onConfirm, onClose, onDomainChange }) {
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(domain || '');
+  const [saving, setSaving] = useState(false);
+  const currentDomain = editValue || domain;
+
+  const handleSaveDomain = async () => {
+    const trimmed = editValue.trim().toLowerCase();
+    if (!trimmed) { toast.error('Le domaine ne peut pas être vide'); return; }
+    if (trimmed === domain) { setEditing(false); return; }
+    setSaving(true);
+    await onDomainChange(trimmed);
+    setSaving(false);
+    setEditing(false);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
@@ -149,7 +174,42 @@ function DnsModal({ domain, serverIp, isRepublish, onConfirm, onClose }) {
                 <h3 className="font-semibold text-lg text-gray-900">
                   {isRepublish ? 'Republier le site' : 'Publier le site'}
                 </h3>
-                <p className="text-sm text-gray-500">{domain}</p>
+                {editing ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleSaveDomain()}
+                      className="text-sm px-2 py-1 border border-gray-300 rounded-md font-mono outline-none focus:ring-2 focus:ring-accent w-56"
+                      placeholder="monsite.fr"
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleSaveDomain}
+                      disabled={saving}
+                      className="text-xs px-2 py-1 bg-accent text-white rounded-md hover:bg-accent/90"
+                    >
+                      {saving ? '...' : 'OK'}
+                    </button>
+                    <button
+                      onClick={() => { setEditing(false); setEditValue(domain || ''); }}
+                      className="text-xs px-2 py-1 text-gray-500 hover:text-gray-700"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm text-gray-500">{currentDomain || <span className="italic text-gray-400">Aucun domaine</span>}</p>
+                    <button
+                      onClick={() => setEditing(true)}
+                      className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                      title="Modifier le domaine"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
@@ -160,39 +220,48 @@ function DnsModal({ domain, serverIp, isRepublish, onConfirm, onClose }) {
 
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <span className="w-5 h-5 bg-accent/10 text-accent rounded-full flex items-center justify-center text-xs font-bold">1</span>
-              Configuration DNS requise
-            </h4>
-            <p className="text-xs text-gray-500 mb-3">
-              Ajoutez ces enregistrements DNS chez votre registrar (OVH, Infomaniak, Gandi, etc.) :
-            </p>
-            <div className="space-y-2">
-              <CopyRow label="Type A — Domaine principal" value={`${domain} → ${serverIp}`} />
-              <CopyRow label="Type A — Sous-domaine www" value={`www.${domain} → ${serverIp}`} />
-              <CopyRow label="Type (pour les formulaires DNS)" value="A" />
-              <CopyRow label="Valeur / Cible" value={serverIp} />
+          {!currentDomain ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-500">Configurez un domaine pour continuer.</p>
+              <button onClick={() => setEditing(true)} className="mt-2 text-sm text-accent hover:underline">Ajouter un domaine</button>
             </div>
-          </div>
+          ) : (
+            <>
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <span className="w-5 h-5 bg-accent/10 text-accent rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                  Configuration DNS requise
+                </h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  Ajoutez ces enregistrements DNS chez votre registrar (OVH, Infomaniak, Gandi, etc.) :
+                </p>
+                <div className="space-y-2">
+                  <CopyRow label="Type A — Domaine principal" value={`${currentDomain} → ${serverIp}`} />
+                  <CopyRow label="Type A — Sous-domaine www" value={`www.${currentDomain} → ${serverIp}`} />
+                  <CopyRow label="Type (pour les formulaires DNS)" value="A" />
+                  <CopyRow label="Valeur / Cible" value={serverIp} />
+                </div>
+              </div>
 
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-xs text-amber-700">
-              <strong>Note :</strong> La propagation DNS peut prendre de 5 minutes à 48 heures.
-              Le site sera accessible dès que le DNS pointe vers notre serveur.
-              Un certificat SSL (HTTPS) sera automatiquement configuré.
-            </p>
-          </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-xs text-amber-700">
+                  <strong>Note :</strong> La propagation DNS peut prendre de 5 minutes à 48 heures.
+                  Le site sera accessible dès que le DNS pointe vers notre serveur.
+                  Un certificat SSL (HTTPS) sera automatiquement configuré.
+                </p>
+              </div>
 
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-              <span className="w-5 h-5 bg-accent/10 text-accent rounded-full flex items-center justify-center text-xs font-bold">2</span>
-              Lancer le déploiement
-            </h4>
-            <p className="text-xs text-gray-500">
-              Le site sera buildé puis déployé sur le serveur. Nginx sera configuré automatiquement.
-            </p>
-          </div>
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <span className="w-5 h-5 bg-accent/10 text-accent rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                  Lancer le déploiement
+                </h4>
+                <p className="text-xs text-gray-500">
+                  Le site sera buildé puis déployé sur le serveur. Nginx sera configuré automatiquement.
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}
@@ -205,7 +274,8 @@ function DnsModal({ domain, serverIp, isRepublish, onConfirm, onClose }) {
           </button>
           <button
             onClick={onConfirm}
-            className="px-5 py-2 bg-accent text-white rounded-lg font-medium text-sm hover:bg-accent/90 transition-colors flex items-center gap-2"
+            disabled={!currentDomain || editing}
+            className={`px-5 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${!currentDomain || editing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-accent text-white hover:bg-accent/90'}`}
           >
             <Rocket size={14} />
             {isRepublish ? 'Republier maintenant' : 'Publier maintenant'}

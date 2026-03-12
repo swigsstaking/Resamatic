@@ -334,6 +334,7 @@ export async function buildSite(siteId) {
       allPages: pages,
       faviconType,
       showLegalLinks: site.footer?.showLegalLinks !== false,
+      buildTimestamp: Date.now(),
     });
 
     const filename = page.isMainHomepage ? 'index.html' : `${page.slug}.html`;

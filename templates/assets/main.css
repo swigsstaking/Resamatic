@@ -10,7 +10,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 0;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 .logo-link { display: flex; align-items: center; text-decoration: none; }
 .logo { max-height: 50px; width: auto; }
@@ -24,11 +25,12 @@
 .header-cta {
   font-family: var(--font-heading);
   font-size: 0.9rem;
-  color: var(--color-accent);
+  color: var(--color-primary);
   text-decoration: none;
   letter-spacing: 0.05em;
+  font-weight: 600;
 }
-.header-cta:hover { text-decoration: underline; }
+.header-cta:hover { color: var(--color-accent); text-decoration: underline; }
 
 /* ===== BUTTONS ===== */
 .btn {
@@ -45,7 +47,7 @@
   letter-spacing: 0.01em;
 }
 .btn-accent {
-  background: var(--color-accent);
+  background: var(--color-primary);
   color: #fff;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
@@ -115,7 +117,7 @@
   text-align: center;
   font-size: 1.05rem;
   line-height: 1.8;
-  color: var(--color-text);
+  color: inherit;
 }
 
 /* ===== HERO (2-column layout like precision-institut.fr) ===== */
@@ -579,7 +581,7 @@
   flex-shrink: 0;
 }
 .testimonial-card cite strong { display: block; font-size: 0.9rem; color: var(--color-primary); }
-.testimonial-card cite span { font-size: 0.82rem; color: #888; }
+.testimonial-card cite span { font-size: 0.82rem; color: #555; }
 
 /* ===== FAQ ===== */
 .faq-list { max-width: 800px; margin: 0 auto; }
@@ -716,7 +718,7 @@
   margin-bottom: 0.75rem;
   font-size: 1rem;
 }
-.map-contact a { color: var(--color-accent); text-decoration: none; font-weight: 500; }
+.map-contact a { color: var(--color-primary); text-decoration: none; font-weight: 500; }
 .map-contact a:hover { text-decoration: underline; }
 .map-embed { min-height: 450px; }
 .map-embed iframe { border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06); width: 100%; height: 450px; }
@@ -724,7 +726,7 @@
 /* ===== FOOTER ===== */
 .site-footer {
   background: color-mix(in srgb, var(--color-primary), #000 30%);
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.85);
   padding: 3rem 0 0;
 }
 .footer-inner {
@@ -756,7 +758,7 @@
 .footer-links { list-style: none; }
 .footer-links li { margin-bottom: 0.5rem; }
 .footer-links a {
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.85);
   font-size: 0.9rem;
   text-decoration: none;
   transition: color 0.25s;
@@ -794,17 +796,17 @@
   padding: 1.25rem 0;
   text-align: center;
   font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.7);
 }
 .footer-bottom a {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
   margin: 0 0.5rem;
 }
 .footer-bottom a:hover { color: var(--color-accent); }
 .footer-nav { list-style: none; padding: 0; margin: 0; }
 .footer-nav li { margin-bottom: 0.4rem; }
-.footer-nav a { color: rgba(255,255,255,0.7); font-size: 0.9rem; transition: color 0.2s; }
+.footer-nav a { color: rgba(255,255,255,0.85); font-size: 0.9rem; transition: color 0.2s; }
 .footer-nav a:hover { color: var(--color-accent); }
 .footer-nav-title { font-weight: 600; margin-bottom: 0.8rem; font-size: 0.95rem; color: #fff; }
 
@@ -859,8 +861,11 @@ html, body { overflow-x: hidden; }
   .faq-item summary { padding: 1rem 1.25rem; font-size: 0.95rem; }
 }
 
-/* ===== IMAGE PLACEHOLDERS ===== */
+/* ===== IMAGE PLACEHOLDERS (editor only) ===== */
 .img-placeholder {
+  display: none;
+}
+body.is-editor .img-placeholder {
   background: #e5e7eb;
   display: flex;
   align-items: center;
@@ -870,6 +875,26 @@ html, body { overflow-x: hidden; }
   cursor: pointer;
   transition: background 0.2s;
 }
-.img-placeholder:hover {
+body.is-editor .img-placeholder:hover {
   background: #d1d5db;
 }
+
+/* When no image and not in editor, collapse to single column */
+.hero-image-col:not(:has(img)) { display: none; }
+.hero-two-col:has(.hero-image-col:not(:has(img))) { grid-template-columns: 1fr; }
+.col-image:not(:has(img)) { display: none; }
+.two-col:has(.col-image:not(:has(img))) { grid-template-columns: 1fr; }
+.why-us-image-col:not(:has(img)) { display: none; }
+.why-us-two-col:has(.why-us-image-col:not(:has(img))) { grid-template-columns: 1fr; }
+.service-image:not(:has(img)) { display: none; }
+.service-detail:has(.service-image:not(:has(img))) { grid-template-columns: 1fr; }
+
+/* In editor mode, always show image columns */
+body.is-editor .hero-image-col:not(:has(img)),
+body.is-editor .col-image:not(:has(img)),
+body.is-editor .why-us-image-col:not(:has(img)),
+body.is-editor .service-image:not(:has(img)) { display: flex; }
+body.is-editor .hero-two-col,
+body.is-editor .two-col,
+body.is-editor .why-us-two-col { grid-template-columns: 1fr 1fr; }
+body.is-editor .service-detail { grid-template-columns: 1fr 1fr; }

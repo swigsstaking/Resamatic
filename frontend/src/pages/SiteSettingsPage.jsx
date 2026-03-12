@@ -1,10 +1,14 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Upload, CheckCircle, Loader2 } from 'lucide-react';
+import { Upload, CheckCircle, Loader2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useSiteStore from '../stores/siteStore';
 import { mediaApi } from '../services/api';
 import PublishButton from '../components/PublishButton';
+
+// API base for static uploads — strip '/api' suffix if present
+const rawBase = import.meta.env.VITE_API_URL || '';
+const API_BASE = rawBase.endsWith('/api') ? rawBase.slice(0, -4) : rawBase;
 
 export default function SiteSettingsPage() {
   const { siteId } = useParams();
@@ -13,6 +17,8 @@ export default function SiteSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [faviconPreview, setFaviconPreview] = useState(null);
   const autoSaveTimer = useRef(null);
   const initialLoad = useRef(true);
 
@@ -20,6 +26,15 @@ export default function SiteSettingsPage() {
     if (currentSite) {
       setForm(JSON.parse(JSON.stringify(currentSite)));
       setTimeout(() => { initialLoad.current = false; }, 100);
+      // Fetch previews for existing logo/favicon
+      if (currentSite.design?.logoMediaId) {
+        const id = typeof currentSite.design.logoMediaId === 'object' ? currentSite.design.logoMediaId._id : currentSite.design.logoMediaId;
+        mediaApi.getOne(id).then(({ media }) => setLogoPreview(media)).catch(() => {});
+      }
+      if (currentSite.design?.faviconMediaId) {
+        const id = typeof currentSite.design.faviconMediaId === 'object' ? currentSite.design.faviconMediaId._id : currentSite.design.faviconMediaId;
+        mediaApi.getOne(id).then(({ media }) => setFaviconPreview(media)).catch(() => {});
+      }
     }
   }, [currentSite]);
 
@@ -52,6 +67,7 @@ export default function SiteSettingsPage() {
     try {
       const { media } = await mediaApi.upload(siteId, formData);
       setForm(prev => ({ ...prev, design: { ...prev.design, logoMediaId: media._id } }));
+      setLogoPreview(media);
       setDirty(true);
       toast.success('Logo uploadé');
     } catch { toast.error('Erreur upload'); }
@@ -66,9 +82,22 @@ export default function SiteSettingsPage() {
     try {
       const { media } = await mediaApi.upload(siteId, formData);
       setForm(prev => ({ ...prev, design: { ...prev.design, faviconMediaId: media._id } }));
+      setFaviconPreview(media);
       setDirty(true);
       toast.success('Favicon uploadé');
     } catch { toast.error('Erreur upload'); }
+  };
+
+  const removeLogo = () => {
+    setForm(prev => ({ ...prev, design: { ...prev.design, logoMediaId: null } }));
+    setLogoPreview(null);
+    setDirty(true);
+  };
+
+  const removeFavicon = () => {
+    setForm(prev => ({ ...prev, design: { ...prev.design, faviconMediaId: null } }));
+    setFaviconPreview(null);
+    setDirty(true);
   };
 
   const u = (path, value) => {
@@ -115,21 +144,57 @@ export default function SiteSettingsPage() {
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-2">Logo</label>
-              <label className="flex items-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:border-accent transition-colors">
-                <Upload size={16} className="text-gray-400" />
-                <span className="text-sm text-gray-500">Uploader un logo</span>
-                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-              </label>
-              {form.design?.logoMediaId && <p className="text-xs text-green-600 mt-1">Logo configuré</p>}
+              {logoPreview ? (
+                <div className="relative group">
+                  <div className="border rounded-lg p-3 bg-gray-50 flex items-center justify-center" style={{ minHeight: 80 }}>
+                    <img
+                      src={`${API_BASE}/uploads/${logoPreview.variants?.[0]?.storagePath || logoPreview.storagePath}`}
+                      alt={logoPreview.alt || 'Logo'}
+                      className="max-h-20 max-w-full object-contain"
+                    />
+                  </div>
+                  <button onClick={removeLogo} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" title="Supprimer le logo">
+                    <X size={14} />
+                  </button>
+                  <label className="block mt-2 text-center text-xs text-gray-400 cursor-pointer hover:text-accent transition-colors">
+                    Changer le logo
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                  </label>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:border-accent transition-colors">
+                  <Upload size={16} className="text-gray-400" />
+                  <span className="text-sm text-gray-500">Uploader un logo</span>
+                  <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                </label>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-2">Favicon</label>
-              <label className="flex items-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:border-accent transition-colors">
-                <Upload size={16} className="text-gray-400" />
-                <span className="text-sm text-gray-500">Uploader un favicon</span>
-                <input type="file" accept="image/*" onChange={handleFaviconUpload} className="hidden" />
-              </label>
-              {form.design?.faviconMediaId && <p className="text-xs text-green-600 mt-1">Favicon configuré</p>}
+              {faviconPreview ? (
+                <div className="relative group">
+                  <div className="border rounded-lg p-3 bg-gray-50 flex items-center justify-center" style={{ minHeight: 80 }}>
+                    <img
+                      src={`${API_BASE}/uploads/${faviconPreview.variants?.[0]?.storagePath || faviconPreview.storagePath}`}
+                      alt={faviconPreview.alt || 'Favicon'}
+                      className="max-h-16 max-w-full object-contain"
+                    />
+                  </div>
+                  <button onClick={removeFavicon} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" title="Supprimer le favicon">
+                    <X size={14} />
+                  </button>
+                  <label className="block mt-2 text-center text-xs text-gray-400 cursor-pointer hover:text-accent transition-colors">
+                    Changer le favicon
+                    <input type="file" accept="image/*" onChange={handleFaviconUpload} className="hidden" />
+                  </label>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:border-accent transition-colors">
+                  <Upload size={16} className="text-gray-400" />
+                  <span className="text-sm text-gray-500">Uploader un favicon</span>
+                  <input type="file" accept="image/*" onChange={handleFaviconUpload} className="hidden" />
+                </label>
+              )}
             </div>
           </div>
         </section>
@@ -156,11 +221,18 @@ export default function SiteSettingsPage() {
         <section className="bg-white rounded-xl p-6">
           <h2 className="font-semibold text-lg mb-4">Design</h2>
           <div className="grid grid-cols-2 gap-4">
-            {['primaryColor', 'accentColor', 'backgroundColor', 'textColor'].map(key => (
+            {[
+              ['primaryColor', 'Couleur principale'],
+              ['accentColor', 'Couleur d\'accent'],
+              ['backgroundColor', 'Fond'],
+              ['textColor', 'Texte'],
+            ].map(([key, label]) => (
               <div key={key}>
-                <label className="text-sm font-medium text-gray-700 block mb-1">{key}</label>
-                <div className="flex gap-2">
-                  <input type="color" value={form.design?.[key] || '#000000'} onChange={e => u(`design.${key}`, e.target.value)} className="w-10 h-10 border rounded cursor-pointer" />
+                <label className="text-sm font-medium text-gray-700 block mb-1">{label}</label>
+                <div className="flex gap-2 items-center">
+                  <label className="relative w-10 h-10 rounded-lg border border-gray-300 cursor-pointer overflow-hidden shrink-0" style={{ backgroundColor: form.design?.[key] || '#000000' }}>
+                    <input type="color" value={form.design?.[key] || '#000000'} onChange={e => u(`design.${key}`, e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                  </label>
                   <input value={form.design?.[key] || ''} onChange={e => u(`design.${key}`, e.target.value)} className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono" />
                 </div>
               </div>

@@ -3,41 +3,66 @@ import axios from 'axios';
 // Provider: 'anthropic' or 'local' (Qwen)
 const AI_PROVIDER = process.env.AI_PROVIDER || 'local';
 
-// Local Qwen
-const LOCAL_URL = process.env.AI_API_URL || 'http://192.168.110.103:8000/v1';
-const LOCAL_MODEL = process.env.AI_MODEL || 'Qwen/Qwen3-VL-8B-Instruct';
+// Local Qwen (Ollama)
+const LOCAL_URL = process.env.AI_API_URL || 'http://192.168.110.103:11434';
+const LOCAL_MODEL = process.env.AI_MODEL || 'qwen3.5:9b-optimized';
 
 // Anthropic
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
 
-async function chat(messages, options = {}) {
-  if (AI_PROVIDER === 'anthropic' && ANTHROPIC_API_KEY) {
-    const system = messages.find(m => m.role === 'system')?.content || '';
-    const userMessages = messages.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content }));
+async function chatAnthropic(messages, options = {}) {
+  const system = messages.find(m => m.role === 'system')?.content || '';
+  const userMessages = messages.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content }));
 
-    const response = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: ANTHROPIC_MODEL,
-      max_tokens: options.maxTokens ?? 4096,
-      system,
-      messages: userMessages,
-      temperature: options.temperature ?? 0.7,
-    }, {
-      timeout: options.timeout ?? 60000,
-      headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    });
+  const response = await axios.post('https://api.anthropic.com/v1/messages', {
+    model: ANTHROPIC_MODEL,
+    max_tokens: options.maxTokens ?? 4096,
+    system,
+    messages: userMessages,
+    temperature: options.temperature ?? 0.7,
+  }, {
+    timeout: options.timeout ?? 60000,
+    headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+  });
 
-    return response.data.content[0].text;
-  }
+  return response.data.content[0].text;
+}
 
-  const response = await axios.post(`${LOCAL_URL}/chat/completions`, {
+async function chatLocal(messages, options = {}) {
+  const response = await axios.post(`${LOCAL_URL}/api/chat`, {
     model: LOCAL_MODEL,
     messages,
-    temperature: options.temperature ?? 0.7,
-    max_tokens: options.maxTokens ?? 4096,
+    stream: false,
+    think: false,
+    options: {
+      temperature: options.temperature ?? 0.7,
+      num_predict: options.maxTokens ?? 4096,
+    },
   }, { timeout: options.timeout ?? 120000 });
 
-  return response.data.choices[0].message.content;
+  return response.data.message.content;
+}
+
+async function chat(messages, options = {}) {
+  if (AI_PROVIDER === 'anthropic' && ANTHROPIC_API_KEY) {
+    try {
+      return await chatAnthropic(messages, options);
+    } catch (err) {
+      console.warn(`[AI] Anthropic failed (${err.message}), falling back to local provider`);
+      return await chatLocal(messages, options);
+    }
+  }
+
+  try {
+    return await chatLocal(messages, options);
+  } catch (err) {
+    if (ANTHROPIC_API_KEY) {
+      console.warn(`[AI] Local failed (${err.message}), falling back to Anthropic`);
+      return await chatAnthropic(messages, options);
+    }
+    throw err;
+  }
 }
 
 function parseJson(text) {
@@ -65,7 +90,7 @@ export async function generatePageContent(site, pageConfig) {
   const prompt1 = `${bizContext}
 
 Génère du contenu RICHE. Le H1 ne doit PAS répéter la ville si elle est déjà dans le mot-clé. JSON:
-{"hero":{"headline":"H1 max 70 car","subheadline":"sous-titre 150 car","ctaText":"${cta}","ctaUrl":"${ctaUrl}","bulletPoints":[{"value":"point 1"},{"value":"point 2"},{"value":"point 3"},{"value":"point 4"},{"value":"point 5"},{"value":"point 6"}]},"textHighlight":{"text":"2-3 phrases avec <strong>mots-clés</strong> en gras"},"description":{"title":"Question engageante avec mot-clé ?","body":"<p>3-4 phrases service principal avec <strong>gras</strong></p><p>2-3 phrases qualifications</p><p>2-3 phrases cadre accueil</p><p><em>conclusion</em></p>","bulletPoints":[{"value":"avantage 1"},{"value":"avantage 2"},{"value":"avantage 3"},{"value":"avantage 4"}],"ctaText":"${cta}","ctaUrl":"${ctaUrl}"},"whyUs":{"title":"Pourquoi choisir ${name}${city ? ' à '+city : ''} ?","subtitle":"une phrase expertise","body":"<p>4-5 phrases expertise techniques formations</p><p>prestations adaptées</p><p><strong>protocole précis:</strong></p>","reasons":[{"title":"raison 1","text":"détail"},{"title":"raison 2","text":"détail"},{"title":"raison 3","text":"détail"},{"title":"raison 4","text":"détail"},{"title":"raison 5","text":"détail"}],"ctaText":"${cta}","ctaUrl":"${ctaUrl}"},"ctaBanner":{"text":"accroche forte","ctaText":"Contactez-nous","ctaUrl":"${ctaUrl}","bannerStyle":"dark"},"seo":{"title":"max 60 car SEO","description":"max 155 car","keywords":["5 mots-clés"]}}`;
+{"hero":{"headline":"H1 max 70 car","subheadline":"sous-titre 150 car","ctaText":"${cta}","ctaUrl":"${ctaUrl}","bulletPoints":[{"value":"point 1"},{"value":"point 2"},{"value":"point 3"},{"value":"point 4"},{"value":"point 5"},{"value":"point 6"}]},"textHighlight":{"text":"2-3 phrases avec <strong>mots-clés</strong> en gras"},"description":{"title":"Question engageante avec mot-clé ?","body":"<p>3-4 phrases service principal avec <strong>gras</strong></p><p>2-3 phrases qualifications</p><p>2-3 phrases cadre accueil</p><p><em>conclusion</em></p>","bulletPoints":[{"value":"avantage 1"},{"value":"avantage 2"},{"value":"avantage 3"},{"value":"avantage 4"}],"ctaText":"${cta}","ctaUrl":"${ctaUrl}"},"whyUs":{"title":"Pourquoi choisir ${name}${city ? ' à '+city : ''} ?","subtitle":"une phrase expertise","body":"<p>4-5 phrases expertise techniques formations</p><p>prestations adaptées</p><p><strong>protocole précis:</strong></p>","reasons":[{"title":"raison 1","text":"détail"},{"title":"raison 2","text":"détail"},{"title":"raison 3","text":"détail"},{"title":"raison 4","text":"détail"},{"title":"raison 5","text":"détail"}],"ctaText":"${cta}","ctaUrl":"${ctaUrl}"},"ctaBanner":{"text":"accroche forte","ctaText":"Contactez-nous","ctaUrl":"${ctaUrl}","bannerStyle":"dark"},"seo":{"title":"max 60 car SEO","description":"max 150 car STRICT, pas plus","keywords":["5 mots-clés"]}}`;
 
   // Call 2: Secondary sections (googleReviews, servicesGrid, guarantee, testimonials, faq, team, map)
   const prompt2 = `${bizContext}

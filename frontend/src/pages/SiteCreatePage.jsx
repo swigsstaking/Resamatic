@@ -50,6 +50,7 @@ export default function SiteCreatePage() {
 
   const handleCreate = async (useAI = false) => {
     setLoading(true);
+    if (useAI) setAiLoading(true);
     try {
       const site = await createSite({
         name: form.name,
@@ -63,7 +64,7 @@ export default function SiteCreatePage() {
       for (const pageConf of form.pages) {
         const page = await pagesApi.create(site._id, {
           title: pageConf.title || pageConf.keyword,
-          type: 'homepage',
+          type: pageConf.isMain ? 'homepage' : 'subpage',
           isMainHomepage: pageConf.isMain,
         });
 
@@ -152,7 +153,12 @@ export default function SiteCreatePage() {
       toast.success('Site créé avec succès !');
       navigate(`/sites/${site._id}/pages`);
     } catch (err) {
-      toast.error(err.error || 'Erreur lors de la création');
+      const msg = err.error || err.message || 'Erreur lors de la création';
+      if (msg.includes('duplicate') || msg.includes('E11000') || msg.includes('domain')) {
+        toast.error('Ce domaine est déjà utilisé par un autre site', { duration: 5000 });
+      } else {
+        toast.error(msg, { duration: 5000 });
+      }
     } finally {
       setLoading(false);
       setAiLoading(false);
@@ -166,7 +172,10 @@ export default function SiteCreatePage() {
       {/* Progress */}
       <div className="flex gap-2 mb-8">
         {STEPS.map((s, i) => (
-          <div key={s} className={`flex-1 h-1.5 rounded-full ${i <= step ? 'bg-accent' : 'bg-gray-200'}`} />
+          <div key={s} className="flex-1">
+            <div className={`h-1.5 rounded-full mb-1 ${i <= step ? 'bg-accent' : 'bg-gray-200'}`} />
+            <p className={`text-xs text-center ${i <= step ? 'text-accent font-medium' : 'text-gray-400'}`}>{s}</p>
+          </div>
         ))}
       </div>
 
@@ -289,7 +298,9 @@ export default function SiteCreatePage() {
               <div key={path}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
                 <div className="flex items-center gap-2">
-                  <input type="color" value={form.design[path.split('.')[1]]} onChange={e => updateField(path, e.target.value)} className="w-10 h-10 border rounded cursor-pointer" />
+                  <label className="relative w-10 h-10 rounded-lg border border-gray-300 cursor-pointer overflow-hidden shrink-0" style={{ backgroundColor: form.design[path.split('.')[1]] }}>
+                    <input type="color" value={form.design[path.split('.')[1]]} onChange={e => updateField(path, e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                  </label>
                   <input value={form.design[path.split('.')[1]]} onChange={e => updateField(path, e.target.value)} className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono" />
                 </div>
               </div>
@@ -315,55 +326,59 @@ export default function SiteCreatePage() {
       {step === 2 && (
         <div className="bg-white rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold mb-4">Pages du site</h2>
-          <p className="text-sm text-gray-500 mb-4">Ajoutez 4-5 variantes de page d'accueil ciblant différents mots-clés pour le SEO.</p>
+          <p className="text-sm text-gray-500 mb-4">Ajoutez les pages de votre site, chacune ciblant un mot-clé SEO différent.</p>
 
           {form.pages.map((page, idx) => (
-            <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <input
-                value={page.title}
-                onChange={e => {
-                  const pages = [...form.pages];
-                  pages[idx] = { ...pages[idx], title: e.target.value };
-                  setForm(prev => ({ ...prev, pages }));
-                }}
-                className="flex-1 px-3 py-2 border rounded-lg text-sm"
-                placeholder="Titre de la page"
-              />
-              <input
-                value={page.keyword}
-                onChange={e => {
-                  const pages = [...form.pages];
-                  pages[idx] = { ...pages[idx], keyword: e.target.value };
-                  setForm(prev => ({ ...prev, pages }));
-                }}
-                className="flex-1 px-3 py-2 border rounded-lg text-sm"
-                placeholder="Mot-clé cible"
-              />
-              <input
-                value={page.serviceFocus}
-                onChange={e => {
-                  const pages = [...form.pages];
-                  pages[idx] = { ...pages[idx], serviceFocus: e.target.value };
-                  setForm(prev => ({ ...prev, pages }));
-                }}
-                className="flex-1 px-3 py-2 border rounded-lg text-sm"
-                placeholder="Focus service (optionnel)"
-              />
-              <label className="flex items-center gap-1 text-xs text-gray-500 whitespace-nowrap">
+            <div key={idx} className="p-4 bg-gray-50 rounded-lg space-y-2 relative">
+              <div className="flex items-center justify-between mb-1">
+                <label className="flex items-center gap-2 text-xs text-gray-500">
+                  <input
+                    type="radio"
+                    name="mainPage"
+                    checked={page.isMain}
+                    onChange={() => {
+                      const pages = form.pages.map((p, i) => ({ ...p, isMain: i === idx }));
+                      setForm(prev => ({ ...prev, pages }));
+                    }}
+                  />
+                  Page principale (index)
+                </label>
+                {form.pages.length > 1 && (
+                  <button onClick={() => removePage(idx)} className="text-gray-400 hover:text-danger text-lg leading-none">&times;</button>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
                 <input
-                  type="radio"
-                  name="mainPage"
-                  checked={page.isMain}
-                  onChange={() => {
-                    const pages = form.pages.map((p, i) => ({ ...p, isMain: i === idx }));
+                  value={page.title}
+                  onChange={e => {
+                    const pages = [...form.pages];
+                    pages[idx] = { ...pages[idx], title: e.target.value };
                     setForm(prev => ({ ...prev, pages }));
                   }}
+                  className="px-3 py-2 border rounded-lg text-sm"
+                  placeholder="Titre de la page"
                 />
-                Principale
-              </label>
-              {form.pages.length > 1 && (
-                <button onClick={() => removePage(idx)} className="text-gray-400 hover:text-danger text-lg">&times;</button>
-              )}
+                <input
+                  value={page.keyword}
+                  onChange={e => {
+                    const pages = [...form.pages];
+                    pages[idx] = { ...pages[idx], keyword: e.target.value };
+                    setForm(prev => ({ ...prev, pages }));
+                  }}
+                  className="px-3 py-2 border rounded-lg text-sm"
+                  placeholder="Mot-clé cible"
+                />
+                <input
+                  value={page.serviceFocus}
+                  onChange={e => {
+                    const pages = [...form.pages];
+                    pages[idx] = { ...pages[idx], serviceFocus: e.target.value };
+                    setForm(prev => ({ ...prev, pages }));
+                  }}
+                  className="px-3 py-2 border rounded-lg text-sm"
+                  placeholder="Focus service (optionnel)"
+                />
+              </div>
             </div>
           ))}
 
@@ -400,7 +415,7 @@ export default function SiteCreatePage() {
               className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
             >
               <Sparkles size={18} />
-              {aiLoading ? `IA : ${aiProgress || 'en cours...'}` : loading ? 'Création...' : 'Créer avec IA'}
+              {aiLoading ? `IA : ${aiProgress || 'Création du site...'}` : loading ? 'Création...' : 'Créer avec IA'}
             </button>
           </div>
         )}

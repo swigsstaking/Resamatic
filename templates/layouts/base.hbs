@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{page.seo.title}}{{#if site.seoDefaults.titleSuffix}} {{site.seoDefaults.titleSuffix}}{{/if}}</title>
-  <meta name="description" content="{{page.seo.description}}">
+  <title>{{#if page.seo.title}}{{page.seo.title}}{{else}}{{page.title}} - {{site.business.name}}{{/if}}{{#if site.seoDefaults.titleSuffix}} {{site.seoDefaults.titleSuffix}}{{/if}}</title>
+  <meta name="description" content="{{#if page.seo.description}}{{page.seo.description}}{{else}}{{site.business.name}} - {{site.business.activity}} à {{site.business.city}}{{/if}}">
   {{#if page.seo.keywords}}<meta name="keywords" content="{{#each page.seo.keywords}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}">{{/if}}
   {{#if page.seo.canonicalUrl}}<link rel="canonical" href="{{page.seo.canonicalUrl}}">{{/if}}
 
@@ -42,7 +42,7 @@
   </style>
 
   <!-- Main CSS -->
-  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="main.css?v={{buildTimestamp}}">
 </head>
 <body>
   {{> header}}
@@ -68,6 +68,7 @@
   <!-- Inline edit bridge (for admin preview) -->
   <script>
     if (window.parent !== window) {
+      document.body.classList.add('is-editor');
       // === Nav link interception: switch editor page on click ===
       document.querySelectorAll('a[href]').forEach(function(a) {
         var href = a.getAttribute('href');
@@ -137,11 +138,11 @@
           if (sec2) {
             sec2.style.backgroundColor = d.backgroundColor || '';
             sec2.style.color = d.textColor || '';
-            // Also update headings color when section has custom text color
+            var colorEls = sec2.querySelectorAll('h1,h2,h3,h4,p,span,li,a,strong,em,div');
             if (d.textColor) {
-              sec2.querySelectorAll('h1,h2,h3,h4').forEach(function(h) { h.style.color = d.textColor; });
+              colorEls.forEach(function(el) { el.style.color = d.textColor; });
             } else {
-              sec2.querySelectorAll('h1,h2,h3,h4').forEach(function(h) { h.style.color = ''; });
+              colorEls.forEach(function(el) { el.style.color = ''; });
             }
           }
         }
