@@ -62,7 +62,7 @@ export default function PagesListPage() {
             <Eye size={16} /> Aperçu
           </button>
           <PublishButton siteId={siteId} status={currentSite?.status} domain={currentSite?.domain} />
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 text-sm bg-accent text-white rounded-lg hover:opacity-90">
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 text-sm bg-accent text-primary rounded-lg hover:opacity-90">
             <Plus size={16} /> Nouvelle page
           </button>
         </div>
@@ -82,7 +82,7 @@ export default function PagesListPage() {
               <option value="legal">Page légale</option>
             </select>
           </div>
-          <button type="submit" className="px-4 py-2 bg-accent text-white rounded-lg text-sm">Créer</button>
+          <button type="submit" className="px-4 py-2 bg-accent text-primary rounded-lg text-sm">Créer</button>
           <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-gray-500 text-sm">Annuler</button>
         </form>
       )}

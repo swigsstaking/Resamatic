@@ -83,7 +83,7 @@ export default function PublishButton({ siteId, status, domain, compact = false 
   const colors = publishing ? 'bg-yellow-100 text-yellow-700' :
     publishStatus === 'published' ? 'bg-green-100 text-green-700 hover:bg-green-200' :
     publishStatus === 'error' ? 'bg-red-100 text-red-700 hover:bg-red-200' :
-    'bg-accent/10 text-accent hover:bg-accent/20';
+    'bg-accent/10 text-accent-text hover:bg-accent/20';
 
   return (
     <>
@@ -187,7 +187,7 @@ function DnsModal({ domain, serverIp, isRepublish, onConfirm, onClose, onDomainC
                     <button
                       onClick={handleSaveDomain}
                       disabled={saving}
-                      className="text-xs px-2 py-1 bg-accent text-white rounded-md hover:bg-accent/90"
+                      className="text-xs px-2 py-1 bg-accent text-primary rounded-md hover:bg-accent/90"
                     >
                       {saving ? '...' : 'OK'}
                     </button>
@@ -275,7 +275,7 @@ function DnsModal({ domain, serverIp, isRepublish, onConfirm, onClose, onDomainC
           <button
             onClick={onConfirm}
             disabled={!currentDomain || editing}
-            className={`px-5 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${!currentDomain || editing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-accent text-white hover:bg-accent/90'}`}
+            className={`px-5 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${!currentDomain || editing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-accent text-primary hover:bg-accent/90'}`}
           >
             <Rocket size={14} />
             {isRepublish ? 'Republier maintenant' : 'Publier maintenant'}

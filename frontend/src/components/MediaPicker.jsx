@@ -108,7 +108,7 @@ export default function MediaPicker({ siteId, onSelect, onClose }) {
             <button
               onClick={() => selected && onSelect(selected)}
               disabled={!selected}
-              className="px-4 py-2 text-sm bg-accent text-white rounded-lg disabled:opacity-50"
+              className="px-4 py-2 text-sm bg-accent text-primary rounded-lg disabled:opacity-50"
             >
               Sélectionner
             </button>

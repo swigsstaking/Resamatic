@@ -440,7 +440,7 @@ export default function SiteCreatePage() {
           ) : <div />}
 
           {step < STEPS.length - 1 ? (
-            <button onClick={() => goToStep(step + 1)} className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-lg font-medium hover:opacity-90">
+            <button onClick={() => goToStep(step + 1)} className="flex items-center gap-2 px-5 py-2.5 bg-accent text-primary rounded-lg font-medium hover:opacity-90">
               Suivant <ArrowRight size={18} />
             </button>
           ) : (
@@ -455,7 +455,7 @@ export default function SiteCreatePage() {
               <button
                 onClick={() => handleCreate(true)}
                 disabled={loading || aiLoading}
-                className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2.5 bg-accent text-primary rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
               >
                 <Sparkles size={18} />
                 {aiLoading ? `IA : ${aiProgress || 'Création du site...'}` : loading ? 'Création...' : 'Créer avec IA'}

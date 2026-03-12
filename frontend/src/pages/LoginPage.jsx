@@ -58,7 +58,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-accent text-white font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="w-full py-3 bg-accent text-primary font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>

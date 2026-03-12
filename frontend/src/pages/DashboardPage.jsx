@@ -41,7 +41,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-primary">Mes sites</h1>
         <Link
           to="/sites/new"
-          className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 px-5 py-2.5 bg-accent text-primary rounded-lg font-medium hover:opacity-90 transition-opacity"
         >
           <Plus size={18} /> Nouveau site
         </Link>
@@ -62,7 +62,7 @@ export default function DashboardPage() {
               <div className="p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-semibold text-lg text-primary">{site.name}</h3>
+                    <h2 className="font-semibold text-lg text-primary">{site.name}</h2>
                     {site.domain && (
                       <p className="text-sm text-gray-500 flex items-center gap-1">
                         <Globe size={14} /> {site.domain}
@@ -75,7 +75,7 @@ export default function DashboardPage() {
                 </div>
 
                 {site.business?.city && (
-                  <p className="text-sm text-gray-400 mb-4">{site.business.activity} - {site.business.city}</p>
+                  <p className="text-sm text-gray-500 mb-4">{site.business.activity} - {site.business.city}</p>
                 )}
 
                 <div className="flex items-center gap-2 flex-wrap">

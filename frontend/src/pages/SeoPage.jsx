@@ -107,7 +107,7 @@ export default function SeoPage() {
             role="tab"
             aria-selected={selectedPageId === page._id}
             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-              selectedPageId === page._id ? 'bg-accent text-white' : 'bg-white border hover:border-accent'
+              selectedPageId === page._id ? 'bg-accent text-primary' : 'bg-white border hover:border-accent'
             }`}
           >
             {page.title}
