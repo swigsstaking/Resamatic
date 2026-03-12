@@ -85,7 +85,7 @@ export default function DashboardPage() {
                   <Link to={`/sites/${site._id}/settings`} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
                     <Settings size={14} /> Paramètres
                   </Link>
-                  <PublishButton siteId={site._id} status={site.status} compact />
+                  <PublishButton siteId={site._id} status={site.status} domain={site.domain} compact />
                 </div>
               </div>
 

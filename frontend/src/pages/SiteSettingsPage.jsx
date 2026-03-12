@@ -95,7 +95,7 @@ export default function SiteSettingsPage() {
             {saved && !saving && <><CheckCircle size={14} className="text-green-500" /> Sauvegardé</>}
             {dirty && !saving && !saved && <span className="text-amber-500">Modifications non sauvegardées</span>}
           </span>
-          <PublishButton siteId={siteId} status={form.status} />
+          <PublishButton siteId={siteId} status={form.status} domain={form.domain} />
         </div>
       </div>
 

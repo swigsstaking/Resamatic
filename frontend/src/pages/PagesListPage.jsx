@@ -61,7 +61,7 @@ export default function PagesListPage() {
           <button onClick={handlePreview} className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200">
             <Eye size={16} /> Aperçu
           </button>
-          <PublishButton siteId={siteId} status={currentSite?.status} />
+          <PublishButton siteId={siteId} status={currentSite?.status} domain={currentSite?.domain} />
           <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 text-sm bg-accent text-white rounded-lg hover:opacity-90">
             <Plus size={16} /> Nouvelle page
           </button>
