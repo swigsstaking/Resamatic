@@ -19,7 +19,7 @@ const pageSchema = new mongoose.Schema({
   siteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Site', required: true, index: true },
   title: { type: String, required: true, trim: true },
   slug: { type: String, required: true, trim: true },
-  type: { type: String, enum: ['homepage', 'subpage', 'legal'], required: true },
+  type: { type: String, enum: ['homepage', 'subpage', 'contact', 'legal'], required: true },
   isMainHomepage: { type: Boolean, default: false },
 
   // SEO

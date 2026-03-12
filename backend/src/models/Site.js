@@ -41,6 +41,7 @@ const siteSchema = new mongoose.Schema({
     fontBody: { type: String, default: 'Inter' },
     logoMediaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Media' },
     faviconMediaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Media' },
+    borderRadius: { type: String, enum: ['rounded', 'square'], default: 'rounded' },
   },
 
   // PostHog integration

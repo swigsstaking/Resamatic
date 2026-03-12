@@ -19,7 +19,7 @@ export default function SiteCreatePage() {
   const [form, setForm] = useState({
     name: '', domain: '',
     business: { name: '', activity: '', description: '', address: '', city: '', zip: '', country: 'CH', phone: '', email: '', siret: '', services: '', targetAudience: '', uniqueSellingPoints: '', tone: 'professionnel', googleReviewCount: '', googleReviewRating: '', googleReviewUrl: '' },
-    design: { primaryColor: '#12203e', accentColor: '#c8a97e', backgroundColor: '#ffffff', textColor: '#333333', fontHeading: 'Playfair Display', fontBody: 'Inter' },
+    design: { primaryColor: '#12203e', accentColor: '#c8a97e', backgroundColor: '#ffffff', textColor: '#333333', fontHeading: 'Playfair Display', fontBody: 'Inter', borderRadius: 'rounded' },
     posthog: { enabled: false, apiKey: '' },
     pages: [{ title: '', keyword: '', serviceFocus: '', isMain: true }],
   });
@@ -95,6 +95,7 @@ export default function SiteCreatePage() {
       });
 
       // Create pages
+      const totalPages = form.pages.length + 1; // +1 for contact page
       for (const pageConf of form.pages) {
         const page = await pagesApi.create(site._id, {
           title: pageConf.title || pageConf.keyword,
@@ -106,7 +107,7 @@ export default function SiteCreatePage() {
         if (useAI && pageConf.keyword) {
           setAiLoading(true);
           const pageIdx = form.pages.indexOf(pageConf);
-          setAiProgress(`Page ${pageIdx + 1}/${form.pages.length} : ${pageConf.keyword}`);
+          setAiProgress(`Page ${pageIdx + 1}/${totalPages} : ${pageConf.keyword}`);
           try {
             const { content } = await aiApi.generatePage({
               siteId: site._id,
@@ -175,6 +176,18 @@ export default function SiteCreatePage() {
             toast.error(`IA: erreur pour "${pageConf.keyword}"`);
           }
         }
+      }
+
+      // Auto-create contact page
+      setAiProgress(`Page ${totalPages}/${totalPages} : Contact`);
+      try {
+        await pagesApi.create(site._id, {
+          title: 'Contact',
+          slug: 'contact',
+          type: 'contact',
+        });
+      } catch (err) {
+        console.error('Contact page creation error:', err);
       }
 
       setAiLoading(false);
@@ -354,6 +367,17 @@ export default function SiteCreatePage() {
               <select value={form.design.fontBody} onChange={e => updateField('design.fontBody', e.target.value)} className="w-full px-4 py-2 border rounded-lg">
                 {['Inter', 'Open Sans', 'Lato', 'Roboto', 'Source Sans Pro', 'Nunito'].map(f => <option key={f}>{f}</option>)}
               </select>
+            </div>
+          </div>
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+            <span className="text-sm text-gray-600">Angles</span>
+            <div className="flex bg-gray-100 rounded-lg p-0.5">
+              <button type="button" onClick={() => updateField('design.borderRadius', 'square')} className={`p-1.5 rounded-md transition-colors ${form.design.borderRadius === 'square' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'}`} title="Angles carrés">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg>
+              </button>
+              <button type="button" onClick={() => updateField('design.borderRadius', 'rounded')} className={`p-1.5 rounded-md transition-colors ${form.design.borderRadius === 'rounded' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'}`} title="Angles arrondis">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg>
+              </button>
             </div>
           </div>
           <p className="text-sm text-gray-400 mt-2">Le logo et favicon seront ajoutables dans les paramètres du site après création.</p>

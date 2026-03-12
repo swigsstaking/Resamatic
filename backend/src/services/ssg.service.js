@@ -73,6 +73,7 @@ function hexToRgb(hex) {
 
 function generateCssVars(design) {
   const primary = design.primaryColor || '#12203e';
+  const isSquare = design.borderRadius === 'square';
   return `:root {
   --color-primary: ${primary};
   --color-primary-rgb: ${hexToRgb(primary)};
@@ -81,6 +82,10 @@ function generateCssVars(design) {
   --color-text: ${design.textColor || '#333333'};
   --font-heading: '${design.fontHeading || 'Playfair Display'}', serif;
   --font-body: '${design.fontBody || 'Inter'}', sans-serif;
+  --radius-sm: ${isSquare ? '2px' : '8px'};
+  --radius-md: ${isSquare ? '4px' : '16px'};
+  --radius-lg: ${isSquare ? '6px' : '20px'};
+  --radius-pill: ${isSquare ? '4px' : '50px'};
 }`;
 }
 

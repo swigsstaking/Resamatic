@@ -80,7 +80,7 @@ export async function generatePageContent(site, pageConfig) {
   const phone = biz.phone || '';
   const phoneDisplay = phone ? phone.replace(/(\d{2})(?=\d)/g, '$1 ') : '';
   const cta = phone ? `Contactez-nous au ${phoneDisplay} >` : 'Contactez-nous >';
-  const ctaUrl = phone ? `tel:${phone}` : '#contact';
+  const ctaUrl = 'contact.html';
 
   const sysPrompt = `Tu es un rédacteur web SEO expert pour entreprises locales françaises. Contenu RICHE et DÉTAILLÉ. Réponds UNIQUEMENT en JSON valide.`;
 

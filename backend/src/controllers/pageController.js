@@ -3,12 +3,12 @@ import Site from '../models/Site.js';
 import slugify from 'slugify';
 
 const DEFAULT_SECTIONS = [
-  { type: 'hero', order: 0, data: { headline: '', subheadline: '', ctaText: '', ctaUrl: '#contact', backgroundMediaId: null, overlayOpacity: 0.5, style: { backgroundColor: '', textColor: '' } } },
+  { type: 'hero', order: 0, data: { headline: '', subheadline: '', ctaText: '', ctaUrl: 'contact.html', backgroundMediaId: null, overlayOpacity: 0.5, style: { backgroundColor: '', textColor: '' } } },
   { type: 'text-highlight', order: 1, data: { text: '', style: { backgroundColor: '', textColor: '' } } },
   { type: 'description', order: 2, data: { title: '', body: '', imageMediaId: null, imagePosition: 'right', bulletPoints: [], style: { backgroundColor: '', textColor: '' } } },
   { type: 'why-us', order: 3, data: { title: 'Pourquoi nous choisir ?', reasons: [], style: { backgroundColor: '', textColor: '' } } },
   { type: 'google-reviews', order: 4, data: { title: 'Avis Google', reviewCount: 0, rating: 5, ctaText: 'Voir nos avis', ctaUrl: '', style: { backgroundColor: '', textColor: '' } } },
-  { type: 'cta-banner', order: 5, data: { text: '', ctaText: 'Contactez-nous', ctaUrl: '#contact', bannerStyle: 'dark', style: { backgroundColor: '', textColor: '' } } },
+  { type: 'cta-banner', order: 5, data: { text: '', ctaText: 'Contactez-nous', ctaUrl: 'contact.html', bannerStyle: 'dark', style: { backgroundColor: '', textColor: '' } } },
   { type: 'services-grid', order: 6, data: { title: 'Nos services', services: [], style: { backgroundColor: '', textColor: '' } } },
   { type: 'services-detail', order: 7, data: { title: '', services: [], style: { backgroundColor: '', textColor: '' } } },
   { type: 'guarantee', order: 8, data: { title: 'Garantie de satisfaction', text: '', percentage: 100, icon: 'shield-check', style: { backgroundColor: '', textColor: '' } } },
@@ -16,6 +16,12 @@ const DEFAULT_SECTIONS = [
   { type: 'faq', order: 10, data: { title: 'Questions fréquentes', items: [], style: { backgroundColor: '', textColor: '' } } },
   { type: 'team', order: 11, data: { title: 'Notre équipe', members: [], style: { backgroundColor: '', textColor: '' } } },
   { type: 'map', order: 12, data: { title: 'Nous trouver', embedUrl: '', address: '', phone: '', email: '', style: { backgroundColor: '', textColor: '' } } },
+];
+
+const DEFAULT_CONTACT_SECTIONS = [
+  { type: 'hero', order: 0, data: { headline: 'Contactez-nous', subheadline: '', ctaText: '', ctaUrl: '', backgroundMediaId: null, overlayOpacity: 0.5, style: { backgroundColor: '', textColor: '' } } },
+  { type: 'testimonials', order: 1, data: { title: 'Ce que nos clients en pensent', items: [], style: { backgroundColor: '', textColor: '' } } },
+  { type: 'map', order: 2, data: { title: 'Nous trouver', embedUrl: '', address: '', phone: '', email: '', style: { backgroundColor: '', textColor: '' } } },
 ];
 
 export const listBySite = async (req, res, next) => {
@@ -40,9 +46,13 @@ export const create = async (req, res, next) => {
     if (!data.slug && data.title) {
       data.slug = slugify(data.title, { lower: true, strict: true });
     }
-    // Auto-populate default sections for homepage/subpage types
-    if (!data.sections?.length && (data.type === 'homepage' || data.type === 'subpage')) {
-      data.sections = JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
+    // Auto-populate default sections based on page type
+    if (!data.sections?.length) {
+      if (data.type === 'contact') {
+        data.sections = JSON.parse(JSON.stringify(DEFAULT_CONTACT_SECTIONS));
+      } else if (data.type === 'homepage' || data.type === 'subpage') {
+        data.sections = JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
+      }
     }
     // Pre-fill sections with business data
     const site = await Site.findById(data.siteId).lean();
@@ -54,10 +64,20 @@ export const create = async (req, res, next) => {
       for (const section of data.sections) {
         switch (section.type) {
           case 'hero':
-            section.data.headline = pageTitle + cityStr;
-            section.data.subheadline = biz.activity ? `Votre spécialiste ${biz.activity.toLowerCase()}${cityStr}` : '';
-            section.data.ctaText = biz.phone ? `Contactez-nous au ${biz.phone.replace(/(\d{2})(?=\d)/g, '$1 ')}` : 'Contactez-nous';
-            section.data.ctaUrl = biz.phone ? `tel:${biz.phone}` : '#contact';
+            if (data.type === 'contact') {
+              const phoneDisplay = biz.phone ? biz.phone.replace(/(\d{2})(?=\d)/g, '$1 ') : '';
+              section.data.headline = `Contactez ${biz.name || 'nous'}`;
+              section.data.subheadline = biz.phone
+                ? `Vous pouvez nous contacter par téléphone au ${phoneDisplay} ou par email`
+                : `Contactez-nous par email${biz.email ? ' à ' + biz.email : ''}`;
+              section.data.ctaText = biz.phone ? `Appelez le ${phoneDisplay}` : (biz.email ? `Envoyer un email` : '');
+              section.data.ctaUrl = biz.phone ? `tel:${biz.phone}` : (biz.email ? `mailto:${biz.email}` : '');
+            } else {
+              section.data.headline = pageTitle + cityStr;
+              section.data.subheadline = biz.activity ? `Votre spécialiste ${biz.activity.toLowerCase()}${cityStr}` : '';
+              section.data.ctaText = biz.phone ? `Contactez-nous au ${biz.phone.replace(/(\d{2})(?=\d)/g, '$1 ')}` : 'Contactez-nous';
+              section.data.ctaUrl = 'contact.html';
+            }
             break;
           case 'description':
             section.data.title = `Pourquoi choisir ${biz.name || 'notre entreprise'} ?`;
@@ -69,6 +89,7 @@ export const create = async (req, res, next) => {
             break;
           case 'cta-banner':
             section.data.text = `Besoin d'un devis ? Contactez ${biz.name || 'notre équipe'} dès maintenant.`;
+            section.data.ctaUrl = 'contact.html';
             break;
           case 'guarantee':
             section.data.text = `Chez ${biz.name || 'nous'}, votre satisfaction est notre priorité.`;

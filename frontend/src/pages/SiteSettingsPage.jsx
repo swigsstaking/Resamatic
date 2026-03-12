@@ -263,6 +263,17 @@ export default function SiteSettingsPage() {
               </select>
             </div>
           </div>
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+            <span className="text-sm text-gray-600">Angles</span>
+            <div className="flex bg-gray-100 rounded-lg p-0.5">
+              <button type="button" onClick={() => u('design.borderRadius', 'square')} className={`p-1.5 rounded-md transition-colors ${form.design?.borderRadius === 'square' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'}`} title="Angles carrés">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg>
+              </button>
+              <button type="button" onClick={() => u('design.borderRadius', 'rounded')} className={`p-1.5 rounded-md transition-colors ${form.design?.borderRadius === 'rounded' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'}`} title="Angles arrondis">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg>
+              </button>
+            </div>
+          </div>
         </section>
 
         {/* Social Links */}

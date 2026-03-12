@@ -79,6 +79,7 @@ export default function PagesListPage() {
             <select value={newPage.type} onChange={e => setNewPage(p => ({ ...p, type: e.target.value }))} className="px-3 py-2 border rounded-lg text-sm">
               <option value="homepage">Page d'accueil</option>
               <option value="subpage">Sous-page</option>
+              <option value="contact">Page contact</option>
               <option value="legal">Page légale</option>
             </select>
           </div>
@@ -106,7 +107,7 @@ export default function PagesListPage() {
                   </Link>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs text-gray-400">/{page.slug}.html</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${page.type === 'homepage' ? 'bg-blue-100 text-blue-600' : page.type === 'legal' ? 'bg-gray-100 text-gray-500' : 'bg-purple-100 text-purple-600'}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${page.type === 'homepage' ? 'bg-blue-100 text-blue-600' : page.type === 'contact' ? 'bg-green-100 text-green-600' : page.type === 'legal' ? 'bg-gray-100 text-gray-500' : 'bg-purple-100 text-purple-600'}`}>
                       {page.type}
                     </span>
                     {page.isMainHomepage && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-600">index</span>}
