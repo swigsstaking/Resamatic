@@ -178,6 +178,24 @@ export default function SiteSettingsPage() {
           </div>
         </section>
 
+        {/* Footer */}
+        <section className="bg-white rounded-xl p-6">
+          <h2 className="font-semibold text-lg mb-4">Pied de page</h2>
+          <div className="space-y-4">
+            <Field label="Texte copyright (laisser vide = auto)" value={form.footer?.copyrightText || ''} onChange={v => u('footer.copyrightText', v)} placeholder="© 2026 Mon Entreprise. Tous droits réservés." />
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" checked={form.footer?.showLegalLinks !== false} onChange={e => u('footer.showLegalLinks', e.target.checked)} className="w-5 h-5 accent-accent" />
+              <span className="text-sm font-medium">Afficher les liens légaux (Mentions légales, CGV)</span>
+            </label>
+            {form.footer?.showLegalLinks !== false && (
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Slug page mentions légales" value={form.footer?.legalPageSlug || 'mentions-legales'} onChange={v => u('footer.legalPageSlug', v)} />
+                <Field label="Slug page CGV" value={form.footer?.cgvPageSlug || 'cgv'} onChange={v => u('footer.cgvPageSlug', v)} />
+              </div>
+            )}
+          </div>
+        </section>
+
         {/* PostHog */}
         <section className="bg-white rounded-xl p-6">
           <h2 className="font-semibold text-lg mb-4">PostHog Analytics</h2>

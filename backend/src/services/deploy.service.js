@@ -5,25 +5,32 @@ import Site from '../models/Site.js';
 
 const execAsync = promisify(exec);
 
-const DEPLOY_HOST = process.env.DEPLOY_HOST || '192.168.110.74';
-const DEPLOY_USER = process.env.DEPLOY_USER || 'swigs';
-const DEPLOY_SITES_DIR = process.env.DEPLOY_SITES_DIR || '/var/www/sites';
-const IS_LOCAL = DEPLOY_HOST === 'localhost' || DEPLOY_HOST === '127.0.0.1';
+function getConfig() {
+  const host = process.env.DEPLOY_HOST || '192.168.110.74';
+  const user = process.env.DEPLOY_USER || 'swigs';
+  const sitesDir = process.env.DEPLOY_SITES_DIR || '/var/www/sites';
+  const isLocal = host === 'localhost' || host === '127.0.0.1';
+  return { host, user, sitesDir, isLocal };
+}
 
 function runCmd(cmd) {
-  if (IS_LOCAL) return execAsync(cmd);
-  return execAsync(`ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} "${cmd}"`);
+  const { isLocal, user, host } = getConfig();
+  if (isLocal) return execAsync(cmd);
+  return execAsync(`ssh -o StrictHostKeyChecking=no ${user}@${host} "${cmd}"`);
 }
 
 function runSudo(cmd) {
-  if (IS_LOCAL) return execAsync(`echo 'AagD2jCusi' | sudo -S bash -c '${cmd}'`);
-  return execAsync(`ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} "echo 'AagD2jCusi' | sudo -S bash -c '${cmd}'"`);}
+  const { isLocal, user, host } = getConfig();
+  if (isLocal) return execAsync(`echo 'AagD2jCusi' | sudo -S bash -c '${cmd}'`);
+  return execAsync(`ssh -o StrictHostKeyChecking=no ${user}@${host} "echo 'AagD2jCusi' | sudo -S bash -c '${cmd}'"`);
+}
 
 function generateNginxConfig(domain) {
+  const { sitesDir } = getConfig();
   return `server {
     listen 80;
     server_name ${domain} www.${domain};
-    root ${DEPLOY_SITES_DIR}/${domain};
+    root ${sitesDir}/${domain};
     index index.html;
 
     # Security headers
@@ -60,19 +67,20 @@ export async function deploySite(siteId) {
   if (!site) throw new Error('Site not found');
   if (!site.domain) throw new Error('Site domain not configured');
 
+  const { isLocal, user, host, sitesDir } = getConfig();
   const buildDir = path.resolve(process.env.BUILD_OUTPUT_DIR || './builds', site.slug);
-  const remoteDir = `${DEPLOY_SITES_DIR}/${site.domain}`;
+  const remoteDir = `${sitesDir}/${site.domain}`;
 
   try {
     // 1. Create target directory
-    await runSudo(`mkdir -p ${remoteDir} && chown ${DEPLOY_USER}:${DEPLOY_USER} ${remoteDir}`);
+    await runSudo(`mkdir -p ${remoteDir} && chown ${user}:${user} ${remoteDir}`);
 
     // 2. Copy/rsync build files
-    if (IS_LOCAL) {
+    if (isLocal) {
       await execAsync(`rsync -a --delete ${buildDir}/ ${remoteDir}/`);
     } else {
       await execAsync(
-        `rsync -azP --delete -e "ssh -o StrictHostKeyChecking=no" ${buildDir}/ ${DEPLOY_USER}@${DEPLOY_HOST}:${remoteDir}/`
+        `rsync -azP --delete -e "ssh -o StrictHostKeyChecking=no" ${buildDir}/ ${user}@${host}:${remoteDir}/`
       );
     }
 

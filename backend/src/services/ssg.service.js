@@ -257,6 +257,11 @@ export async function buildSite(siteId) {
   if (site.design?.faviconMediaId?.storagePath) {
     const favSrc = path.join(UPLOAD_DIR, site.design.faviconMediaId.storagePath);
     try { await fs.copyFile(favSrc, path.join(buildDir, 'favicon.ico')); } catch {}
+    // Also copy with original extension
+    const favFilename = site.design.faviconMediaId.filename;
+    if (favFilename) {
+      try { await fs.copyFile(favSrc, path.join(imagesDir, favFilename)); } catch {}
+    }
   }
 
   // Build each page
@@ -310,6 +315,16 @@ export async function buildSite(siteId) {
       }
     }
 
+    // Determine favicon MIME type from filename extension
+    let faviconType = 'x-icon';
+    if (site.design?.faviconMediaId?.filename) {
+      const favExt = path.extname(site.design.faviconMediaId.filename).toLowerCase();
+      if (favExt === '.png') faviconType = 'png';
+      else if (favExt === '.webp') faviconType = 'webp';
+      else if (favExt === '.svg') faviconType = 'svg+xml';
+      else if (favExt === '.ico') faviconType = 'x-icon';
+    }
+
     const pageHtml = baseTemplate({
       site,
       page,
@@ -317,6 +332,8 @@ export async function buildSite(siteId) {
       jsonLd: jsonLd.map(ld => JSON.stringify(ld)).join('</script>\n<script type="application/ld+json">'),
       cssVars: generateCssVars(site.design),
       allPages: pages,
+      faviconType,
+      showLegalLinks: site.footer?.showLegalLinks !== false,
     });
 
     const filename = page.isMainHomepage ? 'index.html' : `${page.slug}.html`;

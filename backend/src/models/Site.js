@@ -61,6 +61,14 @@ const siteSchema = new mongoose.Schema({
   headerCtaText: { type: String, trim: true },
   headerCtaUrl: { type: String, trim: true },
 
+  // Footer config
+  footer: {
+    copyrightText: { type: String, trim: true },
+    showLegalLinks: { type: Boolean, default: true },
+    legalPageSlug: { type: String, default: 'mentions-legales' },
+    cgvPageSlug: { type: String, default: 'cgv' },
+  },
+
   // Build / Deploy metadata
   lastBuiltAt: Date,
   lastPublishedAt: Date,

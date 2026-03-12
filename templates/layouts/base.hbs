@@ -23,7 +23,11 @@
   <link href="https://fonts.googleapis.com/css2?family={{encodeURI site.design.fontHeading}}:wght@400;700&family={{encodeURI site.design.fontBody}}:wght@300;400;500;600&display=swap" rel="stylesheet">
 
   <!-- Favicon -->
+  {{#if site.design.faviconMediaId}}
+  <link rel="icon" href="images/{{site.design.faviconMediaId.filename}}" type="image/{{faviconType}}">
+  {{else}}
   <link rel="icon" href="favicon.ico" type="image/x-icon">
+  {{/if}}
 
   <!-- Critical CSS inline -->
   <style>
