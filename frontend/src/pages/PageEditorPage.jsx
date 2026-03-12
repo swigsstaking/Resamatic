@@ -655,10 +655,10 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
         value={d[field] || ''}
         onChange={e => onChange(idx, field, e.target.value)}
         placeholder={opts.placeholder}
-        rows={opts.multiline ? 3 : 1}
+        rows={1}
         className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs resize-none focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none overflow-hidden"
         onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-        ref={el => { if (el && el.value) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
+        ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
       />
     </div>
   );
@@ -748,7 +748,7 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
                       {item[key] ? 'Changer' : 'Image'}
                     </button>
                   ) : (
-                    <textarea value={item[key] || ''} onChange={e => onChange(idx, `${field}.${i}.${key}`, e.target.value)} placeholder={placeholder} rows={multiline ? 2 : 1} className="w-full px-2 py-1 border border-gray-200 rounded text-[11px] resize-none overflow-hidden focus:border-accent outline-none" onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} ref={el => { if (el && el.value) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }} />
+                    <textarea value={item[key] || ''} onChange={e => onChange(idx, `${field}.${i}.${key}`, e.target.value)} placeholder={placeholder} rows={1} className="w-full px-2 py-1 border border-gray-200 rounded text-[11px] resize-none overflow-hidden focus:border-accent outline-none" onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }} />
                   )}
                 </div>
               ))}
