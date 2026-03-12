@@ -26,6 +26,10 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen">
+      {/* Skip to main content */}
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-3 focus:bg-accent focus:text-white focus:rounded-lg focus:m-2">
+        Aller au contenu principal
+      </a>
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-5 border-b border-gray-200">
@@ -35,7 +39,7 @@ export default function Layout() {
           </h1>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto" aria-label="Navigation principale">
           <NavLink to="/" end className={linkClass}>
             <LayoutDashboard size={18} /> Dashboard
           </NavLink>
@@ -68,8 +72,8 @@ export default function Layout() {
 
         <div className="p-4 border-t border-gray-200">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600 truncate">{user?.name}</span>
-            <button onClick={handleLogout} className="text-gray-400 hover:text-danger transition-colors">
+            <span className="text-sm text-gray-600 truncate" title={user?.name}>{user?.name}</span>
+            <button onClick={handleLogout} className="text-gray-400 hover:text-danger transition-colors" aria-label="Se déconnecter">
               <LogOut size={18} />
             </button>
           </div>
@@ -77,7 +81,7 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto bg-surface">
+      <main id="main-content" className="flex-1 overflow-y-auto bg-surface">
         <Outlet />
       </main>
     </div>

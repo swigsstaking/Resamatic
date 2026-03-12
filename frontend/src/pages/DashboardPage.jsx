@@ -91,16 +91,16 @@ export default function DashboardPage() {
 
               <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
                 <div className="flex gap-2">
-                  <button onClick={() => handleDuplicate(site._id)} className="text-gray-400 hover:text-gray-600" title="Dupliquer">
+                  <button onClick={() => handleDuplicate(site._id)} className="text-gray-400 hover:text-gray-600" aria-label={`Dupliquer ${site.name}`}>
                     <Copy size={16} />
                   </button>
                   {site.status === 'published' && site.domain && (
-                    <a href={`https://${site.domain}`} target="_blank" rel="noopener" className="text-gray-400 hover:text-accent" title="Voir le site">
+                    <a href={`https://${site.domain}`} target="_blank" rel="noopener" className="text-gray-400 hover:text-accent" aria-label={`Voir ${site.domain}`}>
                       <ExternalLink size={16} />
                     </a>
                   )}
                 </div>
-                <button onClick={() => handleDelete(site._id, site.name)} className="text-gray-400 hover:text-danger" title="Supprimer">
+                <button onClick={() => handleDelete(site._id, site.name)} className="text-gray-400 hover:text-danger" aria-label={`Supprimer ${site.name}`}>
                   <Trash2 size={16} />
                 </button>
               </div>

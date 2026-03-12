@@ -54,8 +54,8 @@ export default function MediaLibraryPage() {
       <h1 className="text-2xl font-bold text-primary mb-6">Bibliothèque média</h1>
 
       {/* Upload zone */}
-      <div {...getRootProps()} className={`p-8 mb-6 border-2 border-dashed rounded-xl text-center cursor-pointer transition-colors ${isDragActive ? 'border-accent bg-accent/5' : 'border-gray-300 hover:border-accent'}`}>
-        <input {...getInputProps()} />
+      <div {...getRootProps()} className={`p-8 mb-6 border-2 border-dashed rounded-xl text-center cursor-pointer transition-colors ${isDragActive ? 'border-accent bg-accent/5' : 'border-gray-300 hover:border-accent'}`} aria-label="Zone de dépôt d'images">
+        <input {...getInputProps()} aria-label="Sélectionner des images" />
         <Upload className="mx-auto w-10 h-10 text-gray-400 mb-3" />
         <p className="text-gray-500">{uploading ? 'Upload en cours...' : 'Glissez des images ou cliquez pour uploader'}</p>
         <p className="text-xs text-gray-400 mt-1">Images converties automatiquement en WebP optimisé</p>
@@ -89,7 +89,8 @@ export default function MediaLibraryPage() {
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(m._id); }}
-                    className="absolute top-2 right-2 p-1.5 bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-danger hover:bg-red-50"
+                    className="absolute top-2 right-2 p-1.5 bg-white rounded-lg opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-70 transition-opacity text-danger hover:bg-red-50"
+                    aria-label={`Supprimer ${m.alt || m.filename}`}
                   >
                     <Trash2 size={14} />
                   </button>

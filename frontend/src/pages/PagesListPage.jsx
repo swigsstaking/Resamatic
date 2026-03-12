@@ -99,7 +99,7 @@ export default function PagesListPage() {
           {pages.map((page) => (
             <div key={page._id} className="bg-white rounded-lg border p-4 flex items-center justify-between hover:shadow-sm transition-shadow">
               <div className="flex items-center gap-4">
-                <GripVertical size={16} className="text-gray-300" />
+                <GripVertical size={16} className="text-gray-300" aria-hidden="true" />
                 <div>
                   <Link to={`/sites/${siteId}/pages/${page._id}`} className="font-medium text-primary hover:text-accent">
                     {page.title}
@@ -115,7 +115,7 @@ export default function PagesListPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Link to={`/sites/${siteId}/pages/${page._id}`} className="text-sm text-accent hover:underline">Éditer</Link>
-                <button onClick={() => handleDelete(page._id, page.title)} className="text-gray-400 hover:text-danger">
+                <button onClick={() => handleDelete(page._id, page.title)} className="text-gray-400 hover:text-danger" aria-label={`Supprimer ${page.title}`}>
                   <Trash2 size={16} />
                 </button>
               </div>

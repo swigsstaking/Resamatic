@@ -132,7 +132,7 @@ function CopyRow({ label, value }) {
       <button
         onClick={handleCopy}
         className={`shrink-0 p-1.5 rounded-md transition-all ${copied ? 'bg-green-100 text-green-600' : 'hover:bg-gray-200 text-gray-400 hover:text-gray-600'}`}
-        title="Copier"
+        aria-label={copied ? 'Copié' : `Copier ${label}`}
       >
         {copied ? <Check size={14} /> : <Copy size={14} />}
       </button>
@@ -157,7 +157,7 @@ function DnsModal({ domain, serverIp, isRepublish, onConfirm, onClose, onDomainC
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="dns-modal-title" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
         className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
@@ -171,7 +171,7 @@ function DnsModal({ domain, serverIp, isRepublish, onConfirm, onClose, onDomainC
                 <Globe size={20} className="text-accent" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg text-gray-900">
+                <h3 id="dns-modal-title" className="font-semibold text-lg text-gray-900">
                   {isRepublish ? 'Republier le site' : 'Publier le site'}
                 </h3>
                 {editing ? (
@@ -212,7 +212,7 @@ function DnsModal({ domain, serverIp, isRepublish, onConfirm, onClose, onDomainC
                 )}
               </div>
             </div>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" aria-label="Fermer">
               <X size={18} />
             </button>
           </div>

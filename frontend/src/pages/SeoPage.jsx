@@ -91,7 +91,7 @@ export default function SeoPage() {
         <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
           <Search size={24} /> SEO
         </h1>
-        <span className="text-sm text-gray-400 flex items-center gap-1.5">
+        <span className="text-sm text-gray-400 flex items-center gap-1.5" aria-live="polite">
           {saving && <><Loader2 size={14} className="animate-spin" /> Sauvegarde...</>}
           {saved && !saving && <><CheckCircle size={14} className="text-green-500" /> Sauvegardé</>}
           {dirty && !saving && !saved && <span className="text-amber-500">Modifications non sauvegardées</span>}
@@ -99,11 +99,13 @@ export default function SeoPage() {
       </div>
 
       {/* Page selector */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2" role="tablist" aria-label="Sélecteur de page">
         {pages.map(page => (
           <button
             key={page._id}
             onClick={() => selectPage(page._id)}
+            role="tab"
+            aria-selected={selectedPageId === page._id}
             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
               selectedPageId === page._id ? 'bg-accent text-white' : 'bg-white border hover:border-accent'
             }`}

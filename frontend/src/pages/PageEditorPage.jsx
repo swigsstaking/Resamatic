@@ -361,7 +361,7 @@ export default function PageEditorPage() {
               <button
                 onClick={() => confirmLeave() && navigate(`/sites/${siteId}/pages`)}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-                title="Retour aux pages"
+                aria-label="Retour aux pages"
               >
                 <ArrowLeft size={16} />
               </button>
@@ -407,7 +407,8 @@ export default function PageEditorPage() {
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleVisibility(idx); }}
                       className="p-0.5 rounded text-gray-400 hover:text-gray-600"
-                      title={s.visible ? 'Masquer' : 'Afficher'}
+                      aria-label={s.visible ? `Masquer ${meta.label}` : `Afficher ${meta.label}`}
+                      aria-pressed={s.visible}
                     >
                       {s.visible ? <Eye size={11} /> : <EyeOff size={11} />}
                     </button>
@@ -460,7 +461,7 @@ export default function PageEditorPage() {
           <button
             onClick={() => setPanelOpen(!panelOpen)}
             className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-            title={panelOpen ? 'Fermer le panneau' : 'Ouvrir le panneau'}
+            aria-label={panelOpen ? 'Fermer le panneau' : 'Ouvrir le panneau'}
           >
             {panelOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
           </button>
@@ -475,7 +476,8 @@ export default function PageEditorPage() {
                   key={v.key}
                   onClick={() => setViewport(v.key)}
                   className={`p-1 rounded transition-colors ${viewport === v.key ? 'bg-white shadow-sm text-gray-700' : 'text-gray-400 hover:text-gray-600'}`}
-                  title={v.label}
+                  aria-label={v.label}
+                  aria-pressed={viewport === v.key}
                 >
                   <VIcon size={13} />
                 </button>
