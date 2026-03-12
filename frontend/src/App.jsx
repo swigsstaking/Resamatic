@@ -21,8 +21,9 @@ function Loader() {
 }
 
 function ProtectedRoute({ children }) {
-  const { user, loading } = useAuthStore();
-  if (loading) return <Loader />;
+  const { user, loading, token } = useAuthStore();
+  // Still loading OR have a token but user not yet fetched — show loader
+  if (loading || (token && !user)) return <Loader />;
   if (!user) return <Navigate to="/login" replace />;
   return children;
 }

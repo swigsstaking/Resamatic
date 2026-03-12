@@ -305,6 +305,23 @@ export default function PageEditorPage() {
     return () => window.removeEventListener('message', handler);
   }, [pageId, siteId, navigate]);
 
+  // --- Warn before leaving with unsaved changes ---
+  useEffect(() => {
+    const handler = (e) => {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
+
+  const confirmLeave = useCallback(() => {
+    if (!dirty) return true;
+    return window.confirm('Vous avez des modifications non sauvegardées. Quitter sans sauvegarder ?');
+  }, [dirty]);
+
   // --- Ctrl+S ---
   useEffect(() => {
     const handler = (e) => {
@@ -342,13 +359,13 @@ export default function PageEditorPage() {
             {/* En-tête */}
             <div className="px-3 py-2.5 border-b border-gray-200 flex items-center gap-2 shrink-0">
               <button
-                onClick={() => navigate(`/sites/${siteId}/pages`)}
+                onClick={() => confirmLeave() && navigate(`/sites/${siteId}/pages`)}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                 title="Retour aux pages"
               >
                 <ArrowLeft size={16} />
               </button>
-              <h2 className="font-semibold text-primary text-sm truncate flex-1">{page.title}</h2>
+              <h2 className="font-semibold text-primary text-sm truncate flex-1" title={page.title}>{page.title}</h2>
               <StatusBadge saving={saving} building={building} dirty={dirty} />
             </div>
 
@@ -371,7 +388,7 @@ export default function PageEditorPage() {
             )}
 
             {/* Liste des sections */}
-            <div className="border-b border-gray-200 overflow-y-auto shrink-0" style={{ maxHeight: '220px' }}>
+            <div className="border-b border-gray-200 overflow-y-auto shrink-0" style={{ maxHeight: '30vh' }}>
               {page.sections.map((s, idx) => {
                 const meta = getSectionMeta(s.type);
                 const Icon = meta.icon;
@@ -397,14 +414,14 @@ export default function PageEditorPage() {
                     <button
                       onClick={(e) => { e.stopPropagation(); moveSection(idx, -1); }}
                       disabled={idx === 0}
-                      className="p-0.5 text-gray-300 hover:text-gray-600 disabled:opacity-20"
+                      className="p-0.5 text-gray-300 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <ChevronUp size={11} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); moveSection(idx, 1); }}
                       disabled={idx === page.sections.length - 1}
-                      className="p-0.5 text-gray-300 hover:text-gray-600 disabled:opacity-20"
+                      className="p-0.5 text-gray-300 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <ChevronDown size={11} />
                     </button>

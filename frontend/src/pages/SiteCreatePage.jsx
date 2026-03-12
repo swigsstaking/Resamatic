@@ -1,23 +1,24 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowLeft, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useSiteStore from '../stores/siteStore';
 import { pagesApi, aiApi, buildApi } from '../services/api';
 
-const STEPS = ['Informations', 'Design', 'Pages'];
+const STEPS = ['1. Entreprise & contact', '2. Design & couleurs', '3. Pages & mots-clés'];
 
 export default function SiteCreatePage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiProgress, setAiProgress] = useState('');
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
   const { createSite } = useSiteStore();
 
   const [form, setForm] = useState({
     name: '', domain: '',
-    business: { name: '', activity: '', description: '', address: '', city: '', zip: '', country: 'FR', phone: '', email: '', siret: '', services: '', targetAudience: '', uniqueSellingPoints: '', tone: 'professionnel', googleReviewCount: '', googleReviewRating: '', googleReviewUrl: '' },
+    business: { name: '', activity: '', description: '', address: '', city: '', zip: '', country: 'CH', phone: '', email: '', siret: '', services: '', targetAudience: '', uniqueSellingPoints: '', tone: 'professionnel', googleReviewCount: '', googleReviewRating: '', googleReviewUrl: '' },
     design: { primaryColor: '#12203e', accentColor: '#c8a97e', backgroundColor: '#ffffff', textColor: '#333333', fontHeading: 'Playfair Display', fontBody: 'Inter' },
     posthog: { enabled: false, apiKey: '' },
     pages: [{ title: '', keyword: '', serviceFocus: '', isMain: true }],
@@ -32,6 +33,8 @@ export default function SiteCreatePage() {
       obj[keys[keys.length - 1]] = value;
       return clone;
     });
+    // Clear error for this field
+    if (errors[path]) setErrors(prev => { const e = { ...prev }; delete e[path]; return e; });
   };
 
   const addPage = () => {
@@ -48,7 +51,38 @@ export default function SiteCreatePage() {
     }));
   };
 
+  // Validation per step
+  const validateStep = (s) => {
+    const errs = {};
+    if (s === 0) {
+      if (!form.name.trim()) errs.name = 'Requis';
+      if (!form.business.name.trim()) errs['business.name'] = 'Requis';
+      if (!form.business.activity.trim()) errs['business.activity'] = 'Requis';
+      if (!form.business.city.trim()) errs['business.city'] = 'Requis';
+    }
+    if (s === 2) {
+      form.pages.forEach((p, i) => {
+        if (!p.title.trim() && !p.keyword.trim()) errs[`page.${i}`] = 'Titre ou mot-clé requis';
+      });
+    }
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      toast.error('Veuillez remplir les champs obligatoires');
+      return false;
+    }
+    return true;
+  };
+
+  const goToStep = (target) => {
+    // Can only go to completed steps or next step
+    if (target > step) {
+      if (!validateStep(step)) return;
+    }
+    setStep(target);
+  };
+
   const handleCreate = async (useAI = false) => {
+    if (!validateStep(2)) return;
     setLoading(true);
     if (useAI) setAiLoading(true);
     try {
@@ -99,7 +133,6 @@ export default function SiteCreatePage() {
                 case 'google-reviews':
                   if (content.googleReviews) {
                     sData.data = { ...s.data, ...content.googleReviews };
-                    // Keep business-level review count/rating
                     if (site.business?.googleReviewCount) sData.data.reviewCount = parseInt(site.business.googleReviewCount);
                     if (site.business?.googleReviewRating) sData.data.rating = parseFloat(site.business.googleReviewRating);
                     if (site.business?.googleReviewUrl) sData.data.ctaUrl = site.business.googleReviewUrl;
@@ -134,7 +167,6 @@ export default function SiteCreatePage() {
 
             await pagesApi.updateSections(page.page._id, sections);
 
-            // Update SEO if available
             if (content.seo) {
               await pagesApi.update(page.page._id, { seo: content.seo });
             }
@@ -146,7 +178,6 @@ export default function SiteCreatePage() {
       }
 
       setAiLoading(false);
-      // Auto-trigger build so preview is available immediately
       try {
         await buildApi.trigger(site._id);
       } catch {}
@@ -165,16 +196,23 @@ export default function SiteCreatePage() {
     }
   };
 
+  const RequiredMark = () => <span className="text-red-400 ml-0.5">*</span>;
+  const fieldError = (key) => errors[key] ? 'border-red-400 ring-1 ring-red-200' : '';
+
   return (
-    <div className="p-8 max-w-3xl mx-auto">
+    <div className="p-8 max-w-3xl mx-auto pb-28">
       <h1 className="text-2xl font-bold text-primary mb-2">Nouveau site</h1>
 
-      {/* Progress */}
+      {/* Progress — clickable steps */}
       <div className="flex gap-2 mb-8">
         {STEPS.map((s, i) => (
-          <div key={s} className="flex-1">
-            <div className={`h-1.5 rounded-full mb-1 ${i <= step ? 'bg-accent' : 'bg-gray-200'}`} />
-            <p className={`text-xs text-center ${i <= step ? 'text-accent font-medium' : 'text-gray-400'}`}>{s}</p>
+          <div
+            key={s}
+            className={`flex-1 ${i <= step ? 'cursor-pointer' : 'cursor-default'}`}
+            onClick={() => i <= step && goToStep(i)}
+          >
+            <div className={`h-1.5 rounded-full mb-1 transition-colors ${i <= step ? 'bg-accent' : 'bg-gray-200'}`} />
+            <p className={`text-xs text-center transition-colors ${i <= step ? 'text-accent font-medium' : 'text-gray-400'} ${i < step ? 'hover:text-accent/70' : ''}`}>{s}</p>
           </div>
         ))}
       </div>
@@ -182,23 +220,23 @@ export default function SiteCreatePage() {
       {/* Step 1: Business info */}
       {step === 0 && (
         <div className="bg-white rounded-xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold mb-4">Informations du business</h2>
+          <h2 className="text-lg font-semibold mb-4">Informations de l'entreprise</h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nom du site</label>
-              <input value={form.name} onChange={e => updateField('name', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="Precision Institut" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nom du site <RequiredMark /></label>
+              <input value={form.name} onChange={e => updateField('name', e.target.value)} className={`w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent ${fieldError('name')}`} placeholder="Mon entreprise" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nom commercial</label>
-              <input value={form.business.name} onChange={e => updateField('business.name', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nom commercial <RequiredMark /></label>
+              <input value={form.business.name} onChange={e => updateField('business.name', e.target.value)} className={`w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent ${fieldError('business.name')}`} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Activité</label>
-              <input value={form.business.activity} onChange={e => updateField('business.activity', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="Institut de beauté" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Activité <RequiredMark /></label>
+              <input value={form.business.activity} onChange={e => updateField('business.activity', e.target.value)} className={`w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent ${fieldError('business.activity')}`} placeholder="Institut de beauté" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ville</label>
-              <input value={form.business.city} onChange={e => updateField('business.city', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ville <RequiredMark /></label>
+              <input value={form.business.city} onChange={e => updateField('business.city', e.target.value)} className={`w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent ${fieldError('business.city')}`} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Code postal</label>
@@ -253,7 +291,7 @@ export default function SiteCreatePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre d'avis Google</label>
-              <input type="number" value={form.business.googleReviewCount} onChange={e => updateField('business.googleReviewCount', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="Ex: 127" />
+              <input type="number" min="0" value={form.business.googleReviewCount} onChange={e => updateField('business.googleReviewCount', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="Ex: 127" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Note Google (ex: 4.8)</label>
@@ -269,7 +307,7 @@ export default function SiteCreatePage() {
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Domaine (optionnel)</label>
-              <input value={form.domain} onChange={e => updateField('domain', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="precision-institut.fr" />
+              <input value={form.domain} onChange={e => updateField('domain', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="monsite.ch" />
             </div>
             <div className="col-span-2">
               <label className="flex items-center gap-3 cursor-pointer">
@@ -326,10 +364,10 @@ export default function SiteCreatePage() {
       {step === 2 && (
         <div className="bg-white rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold mb-4">Pages du site</h2>
-          <p className="text-sm text-gray-500 mb-4">Ajoutez les pages de votre site, chacune ciblant un mot-clé SEO différent.</p>
+          <p className="text-sm text-gray-500 mb-4">Ajoutez les pages de votre site, chacune ciblant un mot-clé SEO différent. Recommandé : 3 à 7 pages.</p>
 
           {form.pages.map((page, idx) => (
-            <div key={idx} className="p-4 bg-gray-50 rounded-lg space-y-2 relative">
+            <div key={idx} className={`p-4 bg-gray-50 rounded-lg space-y-2 relative ${errors[`page.${idx}`] ? 'ring-1 ring-red-300' : ''}`}>
               <div className="flex items-center justify-between mb-1">
                 <label className="flex items-center gap-2 text-xs text-gray-500">
                   <input
@@ -344,7 +382,9 @@ export default function SiteCreatePage() {
                   Page principale (index)
                 </label>
                 {form.pages.length > 1 && (
-                  <button onClick={() => removePage(idx)} className="text-gray-400 hover:text-danger text-lg leading-none">&times;</button>
+                  <button onClick={() => removePage(idx)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Supprimer cette page">
+                    <Trash2 size={14} />
+                  </button>
                 )}
               </div>
               <div className="grid grid-cols-3 gap-2">
@@ -354,6 +394,7 @@ export default function SiteCreatePage() {
                     const pages = [...form.pages];
                     pages[idx] = { ...pages[idx], title: e.target.value };
                     setForm(prev => ({ ...prev, pages }));
+                    if (errors[`page.${idx}`]) setErrors(prev => { const e = { ...prev }; delete e[`page.${idx}`]; return e; });
                   }}
                   className="px-3 py-2 border rounded-lg text-sm"
                   placeholder="Titre de la page"
@@ -364,6 +405,7 @@ export default function SiteCreatePage() {
                     const pages = [...form.pages];
                     pages[idx] = { ...pages[idx], keyword: e.target.value };
                     setForm(prev => ({ ...prev, pages }));
+                    if (errors[`page.${idx}`]) setErrors(prev => { const e = { ...prev }; delete e[`page.${idx}`]; return e; });
                   }}
                   className="px-3 py-2 border rounded-lg text-sm"
                   placeholder="Mot-clé cible"
@@ -376,7 +418,7 @@ export default function SiteCreatePage() {
                     setForm(prev => ({ ...prev, pages }));
                   }}
                   className="px-3 py-2 border rounded-lg text-sm"
-                  placeholder="Focus service (optionnel)"
+                  placeholder="Service principal (optionnel)"
                 />
               </div>
             </div>
@@ -388,37 +430,39 @@ export default function SiteCreatePage() {
         </div>
       )}
 
-      {/* Navigation */}
-      <div className="flex justify-between mt-6">
-        {step > 0 ? (
-          <button onClick={() => setStep(s => s - 1)} className="flex items-center gap-2 px-5 py-2.5 text-gray-600 hover:text-gray-800">
-            <ArrowLeft size={18} /> Précédent
-          </button>
-        ) : <div />}
+      {/* Navigation — sticky bottom */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-200 px-8 py-4 z-40">
+        <div className="max-w-3xl mx-auto flex justify-between">
+          {step > 0 ? (
+            <button onClick={() => setStep(s => s - 1)} className="flex items-center gap-2 px-5 py-2.5 text-gray-600 hover:text-gray-800">
+              <ArrowLeft size={18} /> Précédent
+            </button>
+          ) : <div />}
 
-        {step < STEPS.length - 1 ? (
-          <button onClick={() => setStep(s => s + 1)} className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-lg font-medium hover:opacity-90">
-            Suivant <ArrowRight size={18} />
-          </button>
-        ) : (
-          <div className="flex gap-3">
-            <button
-              onClick={() => handleCreate(false)}
-              disabled={loading}
-              className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 disabled:opacity-50"
-            >
-              {loading ? 'Création...' : 'Créer sans IA'}
+          {step < STEPS.length - 1 ? (
+            <button onClick={() => goToStep(step + 1)} className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-lg font-medium hover:opacity-90">
+              Suivant <ArrowRight size={18} />
             </button>
-            <button
-              onClick={() => handleCreate(true)}
-              disabled={loading || aiLoading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
-            >
-              <Sparkles size={18} />
-              {aiLoading ? `IA : ${aiProgress || 'Création du site...'}` : loading ? 'Création...' : 'Créer avec IA'}
-            </button>
-          </div>
-        )}
+          ) : (
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleCreate(false)}
+                disabled={loading}
+                className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 disabled:opacity-50"
+              >
+                {loading ? 'Création...' : 'Créer sans IA'}
+              </button>
+              <button
+                onClick={() => handleCreate(true)}
+                disabled={loading || aiLoading}
+                className="flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                <Sparkles size={18} />
+                {aiLoading ? `IA : ${aiProgress || 'Création du site...'}` : loading ? 'Création...' : 'Créer avec IA'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

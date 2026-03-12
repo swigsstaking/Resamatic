@@ -50,6 +50,15 @@ export default function SiteSettingsPage() {
     finally { setSaving(false); }
   }, [siteId, form, updateSite]);
 
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handler = (e) => {
+      if (dirty) { e.preventDefault(); e.returnValue = ''; }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
+
   // Auto-save with 2s debounce
   useEffect(() => {
     if (!dirty || initialLoad.current) return;
@@ -201,10 +210,10 @@ export default function SiteSettingsPage() {
 
         {/* Business */}
         <section className="bg-white rounded-xl p-6">
-          <h2 className="font-semibold text-lg mb-4">Informations business</h2>
+          <h2 className="font-semibold text-lg mb-4">Informations de l'entreprise</h2>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Nom commercial" value={form.business?.name || ''} onChange={v => u('business.name', v)} />
-            <Field label="Activité" value={form.business?.activity || ''} onChange={v => u('business.activity', v)} />
+            <Field label="Activité" value={form.business?.activity || ''} onChange={v => u('business.activity', v)} full />
             <Field label="Téléphone" value={form.business?.phone || ''} onChange={v => u('business.phone', v)} />
             <Field label="Email" value={form.business?.email || ''} onChange={v => u('business.email', v)} />
             <Field label="Ville" value={form.business?.city || ''} onChange={v => u('business.city', v)} />
@@ -212,8 +221,12 @@ export default function SiteSettingsPage() {
             <div className="col-span-2">
               <Field label="Adresse" value={form.business?.address || ''} onChange={v => u('business.address', v)} />
             </div>
-            <Field label="SIRET" value={form.business?.siret || ''} onChange={v => u('business.siret', v)} />
+            <Field label="N° entreprise (IDE/SIRET)" value={form.business?.siret || ''} onChange={v => u('business.siret', v)} />
             <Field label="Avis Google (nombre)" value={form.business?.googleReviewCount || ''} onChange={v => u('business.googleReviewCount', Number(v))} />
+            <Field label="Note Google (ex: 4.8)" value={form.business?.googleReviewRating || ''} onChange={v => u('business.googleReviewRating', v)} />
+            <div className="col-span-2">
+              <Field label="Lien avis Google" value={form.business?.googleReviewUrl || ''} onChange={v => u('business.googleReviewUrl', v)} placeholder="https://g.page/r/..." />
+            </div>
           </div>
         </section>
 
@@ -237,6 +250,18 @@ export default function SiteSettingsPage() {
                 </div>
               </div>
             ))}
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">Police titres</label>
+              <select value={form.design?.fontHeading || 'Playfair Display'} onChange={e => u('design.fontHeading', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                {['Playfair Display', 'Montserrat', 'Lora', 'Merriweather', 'Poppins', 'Raleway'].map(f => <option key={f}>{f}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">Police corps</label>
+              <select value={form.design?.fontBody || 'Inter'} onChange={e => u('design.fontBody', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                {['Inter', 'Open Sans', 'Lato', 'Roboto', 'Source Sans Pro', 'Nunito'].map(f => <option key={f}>{f}</option>)}
+              </select>
+            </div>
           </div>
         </section>
 
@@ -270,7 +295,7 @@ export default function SiteSettingsPage() {
 
         {/* PostHog */}
         <section className="bg-white rounded-xl p-6">
-          <h2 className="font-semibold text-lg mb-4">PostHog Analytics</h2>
+          <h2 className="font-semibold text-lg mb-4">Statistiques de visite</h2>
           <label className="flex items-center gap-3 cursor-pointer mb-4">
             <input type="checkbox" checked={form.posthog?.enabled || false} onChange={e => u('posthog.enabled', e.target.checked)} className="w-5 h-5 accent-accent" />
             <span className="text-sm font-medium">Activer PostHog + bandeau cookies RGPD</span>
@@ -287,9 +312,9 @@ export default function SiteSettingsPage() {
   );
 }
 
-function Field({ label, value, onChange, placeholder }) {
+function Field({ label, value, onChange, placeholder, full }) {
   return (
-    <div>
+    <div className={full ? 'col-span-2' : ''}>
       <label className="text-sm font-medium text-gray-700 block mb-1">{label}</label>
       <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-accent" />
     </div>
