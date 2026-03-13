@@ -72,6 +72,7 @@ export const deployApi = {
 
 export const aiApi = {
   generatePage: (data) => api.post('/ai/generate-page', data),
+  generateContact: (data) => api.post('/ai/generate-contact', data),
   generateSeo: (data) => api.post('/ai/generate-seo', data),
   rewrite: (data) => api.post('/ai/rewrite', data),
   generateAlt: (data) => api.post('/ai/generate-alt', data),

@@ -68,8 +68,53 @@ async function chat(messages, options = {}) {
 function parseJson(text) {
   // Extract JSON from markdown code blocks if present
   const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const jsonStr = match ? match[1] : text;
-  return JSON.parse(jsonStr.trim());
+  let jsonStr = (match ? match[1] : text).trim();
+
+  try {
+    return JSON.parse(jsonStr);
+  } catch (firstErr) {
+    // Try to repair truncated JSON by closing open braces/brackets
+    let repaired = jsonStr;
+    // Remove trailing comma before closing
+    repaired = repaired.replace(/,\s*$/, '');
+    // Count open/close braces and brackets
+    const openBraces = (repaired.match(/{/g) || []).length;
+    const closeBraces = (repaired.match(/}/g) || []).length;
+    const openBrackets = (repaired.match(/\[/g) || []).length;
+    const closeBrackets = (repaired.match(/]/g) || []).length;
+    // Close unclosed brackets then braces
+    for (let i = 0; i < openBrackets - closeBrackets; i++) repaired += ']';
+    for (let i = 0; i < openBraces - closeBraces; i++) repaired += '}';
+    try {
+      const result = JSON.parse(repaired);
+      console.warn('[AI] JSON was truncated but successfully repaired');
+      return result;
+    } catch {
+      // Try extracting the largest valid JSON object
+      const objMatch = jsonStr.match(/^\{[\s\S]*/);
+      if (objMatch) {
+        // Progressively trim from end until valid
+        let str = objMatch[0];
+        for (let i = str.length; i > 10; i--) {
+          const candidate = str.slice(0, i);
+          const ob = (candidate.match(/{/g) || []).length;
+          const cb = (candidate.match(/}/g) || []).length;
+          const oB = (candidate.match(/\[/g) || []).length;
+          const cB = (candidate.match(/]/g) || []).length;
+          let fixed = candidate.replace(/,\s*$/, '');
+          for (let j = 0; j < oB - cB; j++) fixed += ']';
+          for (let j = 0; j < ob - cb; j++) fixed += '}';
+          try {
+            const result = JSON.parse(fixed);
+            console.warn(`[AI] JSON repaired by trimming (lost ${str.length - i} chars)`);
+            return result;
+          } catch { continue; }
+        }
+      }
+      console.error('[AI] JSON repair failed, raw text:', jsonStr.slice(0, 500));
+      throw firstErr;
+    }
+  }
 }
 
 export async function generatePageContent(site, pageConfig) {
@@ -98,16 +143,64 @@ Génère du contenu RICHE. Le H1 ne doit PAS répéter la ville si elle est déj
 Génère du contenu RICHE pour les sections secondaires. JSON:
 {"googleReviews":{"title":"titre avis + ville","testimonials":[{"text":"avis 2-3 phrases réaliste","author":"Prénom P.","location":"${city}"},{"text":"avis 2-3 phrases","author":"Prénom M.","location":"Lambersart"},{"text":"avis 2-3 phrases","author":"Prénom D.","location":"Marcq-en-Baroeul"}],"ctaText":"Voir nos avis"},"servicesGrid":{"title":"Nos services${city ? ' à '+city : ''}","subtitle":"2-3 phrases présentation services","services":[{"name":"service 1","shortDescription":"description"},{"name":"service 2","shortDescription":"desc"},{"name":"service 3","shortDescription":"desc"},{"name":"service 4","shortDescription":"desc"}]},"guarantee":{"title":"Garantie de satisfaction","text":"3-4 paragraphes engagement qualité certifications satisfaction avis"},"testimonials":{"items":[{"name":"Prénom L.","location":"${city}","rating":5,"text":"avis 3-4 phrases"},{"name":"Prénom M.","location":"ville proche","rating":5,"text":"avis 3-4 phrases"},{"name":"Prénom D.","location":"ville proche","rating":5,"text":"avis 3-4 phrases"}]},"faq":{"items":[{"question":"question 1 mot-clé ville","answer":"réponse 3-5 phrases"},{"question":"question 2","answer":"réponse détaillée"},{"question":"question 3","answer":"réponse détaillée"},{"question":"question 4","answer":"réponse détaillée"},{"question":"question 5","answer":"réponse détaillée"}]},"team":{"title":"équipe experte ${keyword}${city ? ' à '+city : ''}","body":"<p>2-3 phrases équipe</p>","members":[{"name":"point fort 1"},{"name":"point fort 2"},{"name":"point fort 3"},{"name":"point fort 4"},{"name":"point fort 5"}]},"map":{"title":"${city ? 'Présent à '+city+' et environs' : 'Nous trouver'}","body":"2-3 paragraphes localisation accessibilité zones desservies communes proches","hours":"${biz.hours || 'Du lundi au samedi de 10h à 18h'}"}}`;
 
-  // Run both calls in parallel
-  const [result1, result2] = await Promise.all([
-    chat([{ role: 'system', content: sysPrompt }, { role: 'user', content: prompt1 }], { temperature: 0.7, maxTokens: 4096, timeout: 180000 }),
-    chat([{ role: 'system', content: sysPrompt }, { role: 'user', content: prompt2 }], { temperature: 0.7, maxTokens: 4096, timeout: 180000 }),
+  // Chat + parse with retry on failure
+  async function chatAndParse(messages, opts, label) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const raw = await chat(messages, opts);
+        return parseJson(raw);
+      } catch (err) {
+        if (attempt === 1) {
+          console.warn(`[AI] ${label} attempt 1 failed (${err.message}), retrying...`);
+        } else {
+          console.error(`[AI] ${label} attempt 2 failed, giving up`);
+          throw err;
+        }
+      }
+    }
+  }
+
+  const chatOpts = { temperature: 0.7, maxTokens: 6000, timeout: 180000 };
+
+  // Run both calls in parallel with retry
+  const [part1, part2] = await Promise.all([
+    chatAndParse([{ role: 'system', content: sysPrompt }, { role: 'user', content: prompt1 }], chatOpts, 'main-sections'),
+    chatAndParse([{ role: 'system', content: sysPrompt }, { role: 'user', content: prompt2 }], chatOpts, 'secondary-sections'),
   ]);
 
-  const part1 = parseJson(result1);
-  const part2 = parseJson(result2);
-
   return { ...part1, ...part2 };
+}
+
+export async function generateContactContent(site) {
+  const biz = site.business || {};
+  const name = biz.name || site.name;
+  const city = biz.city || '';
+  const phone = biz.phone || '';
+  const phoneDisplay = phone ? phone.replace(/(\d{2})(?=\d)/g, '$1 ') : '';
+  const ctaPhone = phone ? `Appelez le ${phoneDisplay}` : '';
+
+  const sysPrompt = `Tu es un rédacteur web expert en conversion pour entreprises locales françaises. Ton objectif : créer une page Contact qui rassure et incite à prendre contact. Réponds UNIQUEMENT en JSON valide.`;
+
+  const bizContext = `Entreprise: ${name} | Activité: ${biz.activity || ''} | Ville: ${city} | Adresse: ${biz.address || ''} ${biz.zip || ''} ${city} | Tél: ${phone} | Email: ${biz.email || ''} | Services: ${biz.services || ''} | Points forts: ${biz.uniqueSellingPoints || ''} | Description: ${biz.description || ''} | Avis Google: ${biz.googleReviewCount || '?'}+ (${biz.googleReviewRating || '5'}/5)`;
+
+  const prompt = `${bizContext}
+
+Génère du contenu pour une page CONTACT axée conversion et confiance. JSON:
+{"hero":{"headline":"titre accrocheur contact max 60 car (pas juste 'Contactez-nous')","subheadline":"sous-titre rassurant 120 car mentionnant réactivité/disponibilité","bulletPoints":[{"value":"avantage contact 1 (ex: réponse rapide)"},{"value":"avantage 2 (ex: devis gratuit)"},{"value":"avantage 3 (ex: sans engagement)"}]${ctaPhone ? `,"ctaText":"${ctaPhone}"` : ''}},"testimonials":{"items":[{"name":"Prénom L.","location":"${city}","rating":5,"text":"avis 3-4 phrases sur la qualité d'accueil et la facilité de prise de contact"},{"name":"Prénom M.","location":"ville proche","rating":5,"text":"avis sur la réactivité et le professionnalisme"},{"name":"Prénom D.","location":"ville proche","rating":5,"text":"avis sur l'expérience client et la recommandation"}]},"map":{"title":"${city ? name + ' — ' + city : 'Nous trouver'}","body":"<p>2-3 phrases localisation, accessibilité, parking, transports</p><p>zones desservies et communes proches</p>","hours":"${biz.hours || 'Du lundi au samedi de 10h à 18h'}"},"seo":{"title":"Contact ${name}${city ? ' à ' + city : ''} — Prenez rendez-vous","description":"Contactez ${name}${city ? ' à ' + city : ''}. ${biz.activity || 'Nos services'}, devis gratuit, réponse rapide. ${phone ? 'Tél: ' + phoneDisplay : ''}","keywords":["contact ${name ? name.toLowerCase() : ''}","${biz.activity ? biz.activity.toLowerCase() : ''} ${city.toLowerCase()}","rendez-vous","devis gratuit","${city.toLowerCase()}"]}}`;
+
+  const messages = [{ role: 'system', content: sysPrompt }, { role: 'user', content: prompt }];
+  const opts = { temperature: 0.7, maxTokens: 3000, timeout: 120000 };
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const result = await chat(messages, opts);
+      return parseJson(result);
+    } catch (err) {
+      if (attempt === 1) {
+        console.warn(`[AI] Contact generation attempt 1 failed (${err.message}), retrying...`);
+      } else throw err;
+    }
+  }
 }
 
 export async function generateSeoMetadata(site, pageContent) {

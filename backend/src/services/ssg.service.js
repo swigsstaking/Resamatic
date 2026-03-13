@@ -136,11 +136,9 @@ function generateFaqJsonLd(faqSection) {
 }
 
 function generateRobotsTxt(domain) {
-  return `User-agent: *
-Allow: /
-
-Sitemap: https://${domain}/sitemap.xml
-`;
+  let txt = `User-agent: *\nAllow: /\n`;
+  if (domain) txt += `\nSitemap: https://${domain}/sitemap.xml\n`;
+  return txt;
 }
 
 function generateSitemapXml(domain, pages) {
@@ -302,12 +300,19 @@ export async function buildSite(siteId) {
           };
         }
         if (section.type === 'map') {
+          const mapAddress = sectionData.address || site.business?.address || '';
+          const mapCity = site.business?.city || '';
+          const mapZip = site.business?.zip || '';
           sectionData = {
             ...sectionData,
-            address: sectionData.address || site.business?.address || '',
+            address: mapAddress,
             phone: sectionData.phone || site.business?.phone || '',
             email: sectionData.email || site.business?.email || '',
           };
+          if (!sectionData.embedUrl && mapAddress) {
+            const parts = [mapAddress, mapZip, mapCity].filter(Boolean);
+            sectionData.embedUrl = `https://www.google.com/maps?q=${encodeURIComponent(parts.join(' '))}&output=embed`;
+          }
         }
         // Inject service links: each service points to another keyword page
         if (section.type === 'services-grid' && sectionData.services?.length) {
@@ -340,6 +345,17 @@ export async function buildSite(siteId) {
       }
     }
 
+    // Extract hero image URL for preload hint
+    const heroSection = page.sections.find(s => s.type === 'hero' && s.visible);
+    let heroImagePreload = '';
+    if (heroSection?.data?.backgroundMediaId) {
+      const heroMedia = mediaMap[heroSection.data.backgroundMediaId.toString()];
+      if (heroMedia) {
+        const best = heroMedia.variants?.find(v => v.suffix === '800w') || heroMedia.variants?.[0];
+        if (best) heroImagePreload = `images/${best.storagePath.split('/').pop()}`;
+      }
+    }
+
     // Determine favicon MIME type from filename extension
     let faviconType = 'x-icon';
     if (site.design?.faviconMediaId?.filename) {
@@ -360,15 +376,16 @@ export async function buildSite(siteId) {
       faviconType,
       showLegalLinks: site.footer?.showLegalLinks !== false,
       buildTimestamp: Date.now(),
+      heroImagePreload,
     });
 
     const filename = page.isMainHomepage ? 'index.html' : `${page.slug}.html`;
     await fs.writeFile(path.join(buildDir, filename), pageHtml);
   }
 
-  // Generate SEO files
+  // Generate SEO files (always generate robots.txt for Lighthouse)
+  await fs.writeFile(path.join(buildDir, 'robots.txt'), generateRobotsTxt(site.domain));
   if (site.domain) {
-    await fs.writeFile(path.join(buildDir, 'robots.txt'), generateRobotsTxt(site.domain));
     await fs.writeFile(path.join(buildDir, 'sitemap.xml'), generateSitemapXml(site.domain, pages));
     await fs.writeFile(path.join(buildDir, 'llms.txt'), generateLlmsTxt(site, pages));
     await fs.writeFile(path.join(buildDir, 'llms-full.txt'), generateLlmsFullTxt(site, pages));

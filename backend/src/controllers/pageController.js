@@ -2,6 +2,12 @@ import Page from '../models/Page.js';
 import Site from '../models/Site.js';
 import slugify from 'slugify';
 
+function buildMapsEmbedUrl(address, city, zip) {
+  const parts = [address, zip, city].filter(Boolean);
+  if (!parts.length) return '';
+  return `https://www.google.com/maps?q=${encodeURIComponent(parts.join(' '))}&output=embed`;
+}
+
 const DEFAULT_SECTIONS = [
   { type: 'hero', order: 0, data: { headline: '', subheadline: '', ctaText: '', ctaUrl: 'contact.html', backgroundMediaId: null, overlayOpacity: 0.5, style: { backgroundColor: '', textColor: '' } } },
   { type: 'text-highlight', order: 1, data: { text: '', style: { backgroundColor: '', textColor: '' } } },
@@ -98,6 +104,9 @@ export const create = async (req, res, next) => {
             section.data.address = biz.address || '';
             section.data.phone = biz.phone || '';
             section.data.email = biz.email || '';
+            if (!section.data.embedUrl) {
+              section.data.embedUrl = buildMapsEmbedUrl(biz.address, biz.city, biz.zip);
+            }
             break;
         }
       }
@@ -144,6 +153,13 @@ export const updateSection = async (req, res, next) => {
     if (update.visible !== undefined) page.sections[idx].visible = update.visible;
     if (update.order !== undefined) page.sections[idx].order = update.order;
 
+    // Auto-generate Google Maps embed URL if address changed and no embedUrl set
+    if (page.sections[idx].type === 'map' && page.sections[idx].data?.address && !page.sections[idx].data?.embedUrl) {
+      const site = await Site.findById(page.siteId).lean();
+      const biz = site?.business || {};
+      page.sections[idx].data.embedUrl = buildMapsEmbedUrl(page.sections[idx].data.address, biz.city, biz.zip);
+    }
+
     page.markModified('sections');
     await page.save();
     res.json({ page });
@@ -156,6 +172,15 @@ export const updateSections = async (req, res, next) => {
     if (!page) return res.status(404).json({ error: 'Page not found' });
 
     page.sections = req.body.sections;
+
+    // Auto-generate Google Maps embed URL from address
+    const site = await Site.findById(page.siteId).lean();
+    const biz = site?.business || {};
+    for (const section of page.sections) {
+      if (section.type === 'map' && !section.data?.embedUrl && section.data?.address) {
+        section.data.embedUrl = buildMapsEmbedUrl(section.data.address, biz.city, biz.zip);
+      }
+    }
 
     // Auto-inject service links: each service points to another keyword page
     const hasServicesGrid = page.sections.some(s => s.type === 'services-grid');

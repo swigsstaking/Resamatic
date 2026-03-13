@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, ArrowRight, ArrowLeft, Trash2 } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowLeft, Trash2, Upload, X } from 'lucide-react';
+import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 import useSiteStore from '../stores/siteStore';
-import { pagesApi, aiApi, buildApi } from '../services/api';
+import { pagesApi, aiApi, buildApi, mediaApi } from '../services/api';
 
 const STEPS = ['1. Entreprise & contact', '2. Design & couleurs', '3. Pages & mots-clés'];
 
@@ -15,6 +16,21 @@ export default function SiteCreatePage() {
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
   const { createSite } = useSiteStore();
+
+  const [images, setImages] = useState([]); // { file: File, preview: string }[]
+
+  const onDropImages = useCallback((files) => {
+    const newImages = files.map(f => ({ file: f, preview: URL.createObjectURL(f) }));
+    setImages(prev => [...prev, ...newImages]);
+  }, []);
+  const removeImage = (idx) => {
+    setImages(prev => { URL.revokeObjectURL(prev[idx].preview); return prev.filter((_, i) => i !== idx); });
+  };
+  const { getRootProps: getImgRootProps, getInputProps: getImgInputProps, isDragActive: isImgDragActive } = useDropzone({
+    onDrop: onDropImages,
+    accept: { 'image/*': [] },
+    multiple: true,
+  });
 
   const [form, setForm] = useState({
     name: '', domain: '',
@@ -93,6 +109,22 @@ export default function SiteCreatePage() {
         design: form.design,
         posthog: form.posthog,
       });
+
+      // Upload images if any
+      const uploadedMediaIds = [];
+      if (images.length > 0) {
+        setAiProgress('Upload des images...');
+        for (const img of images) {
+          try {
+            const formData = new FormData();
+            formData.append('file', img.file);
+            const { media } = await mediaApi.upload(site._id, formData);
+            uploadedMediaIds.push(media._id);
+          } catch (err) {
+            console.error('Image upload error:', err);
+          }
+        }
+      }
 
       // Create pages
       const totalPages = form.pages.length + 1; // +1 for contact page
@@ -179,6 +211,21 @@ export default function SiteCreatePage() {
               return sData;
             });
 
+            // Assign uploaded images to sections
+            if (uploadedMediaIds.length > 0) {
+              const pageIdx = createdPages.indexOf(created);
+              const heroImgId = uploadedMediaIds[pageIdx * 2]; // 0, 2, 4...
+              const descImgId = uploadedMediaIds[pageIdx * 2 + 1]; // 1, 3, 5...
+              for (const s of sections) {
+                if (s.type === 'hero' && heroImgId && !s.data.backgroundMediaId) {
+                  s.data.backgroundMediaId = heroImgId;
+                }
+                if (s.type === 'description' && descImgId && !s.data.imageMediaId) {
+                  s.data.imageMediaId = descImgId;
+                }
+              }
+            }
+
             await pagesApi.updateSections(created.page._id, sections);
 
             if (content.seo) {
@@ -188,17 +235,66 @@ export default function SiteCreatePage() {
             console.error('AI generation error for page:', err);
             toast.error(`IA: erreur pour "${pageConf.keyword}"`);
           }
+        } else if (uploadedMediaIds.length > 0) {
+          // No AI but images uploaded — assign images to sections directly
+          const pageIdx = createdPages.indexOf(created);
+          const heroImgId = uploadedMediaIds[pageIdx * 2];
+          const descImgId = uploadedMediaIds[pageIdx * 2 + 1];
+          if (heroImgId || descImgId) {
+            const sections = created.page.sections.map(s => {
+              const sData = { ...s };
+              if (s.type === 'hero' && heroImgId) sData.data = { ...s.data, backgroundMediaId: heroImgId };
+              if (s.type === 'description' && descImgId) sData.data = { ...s.data, imageMediaId: descImgId };
+              return sData;
+            });
+            await pagesApi.updateSections(created.page._id, sections);
+          }
         }
       }
 
-      // Auto-create contact page
+      // Auto-create contact page + AI generation
       setAiProgress(`Page ${totalPages}/${totalPages} : Contact`);
       try {
-        await pagesApi.create(site._id, {
+        const contactPage = await pagesApi.create(site._id, {
           title: 'Contact',
           slug: 'contact',
           type: 'contact',
         });
+
+        if (useAI) {
+          try {
+            const { content } = await aiApi.generateContact({ siteId: site._id });
+
+            const contactSections = contactPage.page.sections.map(s => {
+              const sData = { ...s };
+              switch (s.type) {
+                case 'hero':
+                  if (content.hero) {
+                    sData.data = { ...s.data, ...content.hero };
+                    // Preserve business CTA (phone/email link)
+                    if (s.data.ctaUrl) sData.data.ctaUrl = s.data.ctaUrl;
+                    if (s.data.ctaText) sData.data.ctaText = s.data.ctaText;
+                  }
+                  break;
+                case 'testimonials':
+                  if (content.testimonials?.items) sData.data = { ...s.data, items: content.testimonials.items };
+                  break;
+                case 'map':
+                  if (content.map) sData.data = { ...s.data, ...content.map, address: s.data.address, phone: s.data.phone, email: s.data.email };
+                  break;
+              }
+              return sData;
+            });
+
+            await pagesApi.updateSections(contactPage.page._id, contactSections);
+
+            if (content.seo) {
+              await pagesApi.update(contactPage.page._id, { seo: content.seo });
+            }
+          } catch (err) {
+            console.error('AI contact generation error:', err);
+          }
+        }
       } catch (err) {
         console.error('Contact page creation error:', err);
       }
@@ -394,6 +490,34 @@ export default function SiteCreatePage() {
             </div>
           </div>
           <p className="text-sm text-gray-400 mt-2">Le logo et favicon seront ajoutables dans les paramètres du site après création.</p>
+
+          {/* Image import zone */}
+          <div className="border-t pt-4 mt-4">
+            <h3 className="text-sm font-semibold text-gray-600 mb-3">Images du site (optionnel)</h3>
+            <p className="text-xs text-gray-400 mb-3">Importez vos images maintenant, elles seront automatiquement placées dans les sections hero et description de vos pages.</p>
+            <div {...getImgRootProps()} className={`p-4 border-2 border-dashed rounded-xl text-center cursor-pointer transition-colors ${isImgDragActive ? 'border-accent bg-accent/5' : 'border-gray-300 hover:border-accent'}`}>
+              <input {...getImgInputProps()} />
+              <Upload className="mx-auto w-6 h-6 text-gray-400 mb-1" />
+              <p className="text-sm text-gray-500">
+                {isImgDragActive ? 'Déposez ici' : 'Glissez des images ou cliquez pour importer'}
+              </p>
+            </div>
+            {images.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mt-3">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200">
+                    <img src={img.preview} alt="" className="w-full h-full object-cover" />
+                    <button onClick={(e) => { e.stopPropagation(); removeImage(idx); }} className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <X size={12} />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-1 py-0.5 truncate">
+                      {idx === 0 ? 'Hero page 1' : idx === 1 ? 'Description page 1' : `Hero page ${Math.ceil(idx / 2) + 1}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

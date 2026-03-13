@@ -16,6 +16,19 @@ export const generatePage = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+export const generateContact = async (req, res, next) => {
+  try {
+    const { siteId } = req.body;
+    if (!siteId) return res.status(400).json({ error: 'siteId required' });
+
+    const site = await Site.findById(siteId).lean();
+    if (!site) return res.status(404).json({ error: 'Site not found' });
+
+    const content = await aiService.generateContactContent(site);
+    res.json({ content });
+  } catch (err) { next(err); }
+};
+
 export const generateSeo = async (req, res, next) => {
   try {
     const { siteId, pageContent } = req.body;

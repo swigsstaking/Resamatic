@@ -17,6 +17,8 @@
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">{{{jsonLd}}}</script>
 
+  {{#if heroImagePreload}}<link rel="preload" as="image" href="{{heroImagePreload}}" type="image/webp">{{/if}}
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
