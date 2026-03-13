@@ -189,6 +189,15 @@ export default function SiteCreatePage() {
                   break;
                 case 'services-grid':
                   if (content.servicesGrid) sData.data = { ...s.data, ...content.servicesGrid };
+                  // Override services with actual pages (correct links)
+                  {
+                    const otherPages = createdPages.filter((_, j) => j !== createdPages.indexOf(created));
+                    sData.data.services = otherPages.map((op) => ({
+                      name: op.conf.serviceFocus || op.conf.keyword || op.conf.title,
+                      shortDescription: '',
+                      linkUrl: op.href,
+                    }));
+                  }
                   break;
                 case 'guarantee':
                   if (content.guarantee) sData.data = { ...s.data, ...content.guarantee };

@@ -76,7 +76,7 @@
 .btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); }
 
 /* ===== SECTIONS COMMON ===== */
-.section { padding: 5rem 0; }
+.section { padding: 3.5rem 0; }
 .section.dark {
   background: var(--color-primary);
   color: #fff;
@@ -304,7 +304,7 @@
 /* ===== REVIEWS (2-column: testimonials left, count right) ===== */
 .section-reviews {
   background: #fff;
-  padding: 5rem 0;
+  padding: 3.5rem 0;
 }
 .reviews-two-col {
   display: grid;
@@ -414,7 +414,7 @@
 /* ===== SERVICES GRID (cards with images + link buttons) ===== */
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 2rem;
 }
 .service-card {
@@ -427,6 +427,8 @@
   border: 1px solid rgba(0, 0, 0, 0.04);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .service-card:hover {
   transform: translateY(-6px);
@@ -455,6 +457,7 @@
   font-weight: 700;
 }
 .service-card p { font-size: 0.88rem; color: #666; line-height: 1.55; margin-bottom: 0.75rem; }
+.service-card h3 { flex-grow: 1; }
 .service-card-link {
   display: inline-block;
   font-size: 0.85rem;
@@ -465,7 +468,7 @@
   border: 1.5px solid var(--color-primary);
   border-radius: var(--radius-pill);
   transition: all 0.25s;
-  margin-top: 0.25rem;
+  margin-top: auto;
 }
 .service-card-link:hover {
   background: var(--color-primary);
@@ -503,7 +506,7 @@
 /* ===== GUARANTEE (simple text block) ===== */
 .section-guarantee {
   background: #fff;
-  padding: 4rem 0;
+  padding: 3rem 0;
 }
 .guarantee-title {
   font-size: 1.8rem;
@@ -629,7 +632,7 @@
 }
 
 /* ===== TEAM (bullet list, not card grid) ===== */
-.section-team { padding: 4rem 0; }
+.section-team { padding: 3rem 0; }
 .team-title {
   font-size: 1.8rem;
   font-weight: 700;
@@ -682,7 +685,7 @@
 }
 
 /* ===== MAP ===== */
-.section-map { padding: 4rem 0 1.5rem; }
+.section-map { padding: 3rem 0 1.5rem; }
 .section-map .map-body { font-size: 1rem; line-height: 1.8; color: #555; margin-bottom: 2.5rem; max-width: 800px; }
 .map-layout {
   display: grid;
@@ -828,7 +831,7 @@ html, body { overflow-x: hidden; }
   .map-layout { grid-template-columns: 1fr; gap: 2rem; }
   .two-col.img-left .col-image,
   .service-detail.img-left .service-image { order: 0; }
-  .section { padding: 3.5rem 0; }
+  .section { padding: 2.5rem 0; }
   .section-hero { padding: 2rem 0; }
   .hero-text-col h1 { font-size: clamp(1.6rem, 5vw, 2.2rem); }
   .section-title { font-size: 1.6rem; margin-bottom: 2rem; }

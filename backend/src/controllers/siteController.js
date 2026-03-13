@@ -24,7 +24,14 @@ export const create = async (req, res, next) => {
   try {
     const data = req.body;
     if (!data.slug && data.name) {
-      data.slug = slugify(data.name, { lower: true, strict: true });
+      let baseSlug = slugify(data.name, { lower: true, strict: true });
+      let slug = baseSlug;
+      let suffix = 2;
+      while (await Site.exists({ slug })) {
+        slug = `${baseSlug}-${suffix}`;
+        suffix++;
+      }
+      data.slug = slug;
     }
     const site = await Site.create(data);
     res.status(201).json({ site });
