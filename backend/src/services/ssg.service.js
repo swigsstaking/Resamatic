@@ -269,6 +269,16 @@ export async function buildSite(siteId) {
     }
   }
 
+  // Pre-compute service link targets per page (other keyword pages, excluding self)
+  const keywordPages = pages.filter(p => p.type === 'homepage' || p.type === 'subpage');
+  const serviceLinkMap = {};
+  for (const page of keywordPages) {
+    const others = keywordPages.filter(p => p._id.toString() !== page._id.toString());
+    serviceLinkMap[page._id.toString()] = others.map(p =>
+      p.isMainHomepage ? 'index.html' : `${p.slug}.html`
+    );
+  }
+
   // Build each page
   for (const page of pages) {
     const jsonLd = [generateJsonLd(site, page)];
@@ -298,6 +308,16 @@ export async function buildSite(siteId) {
             phone: sectionData.phone || site.business?.phone || '',
             email: sectionData.email || site.business?.email || '',
           };
+        }
+        // Inject service links: each service points to another keyword page
+        if (section.type === 'services-grid' && sectionData.services?.length) {
+          const hrefs = serviceLinkMap[page._id.toString()] || [];
+          if (hrefs.length) {
+            sectionData.services = sectionData.services.map((svc, idx) => ({
+              ...svc,
+              linkUrl: hrefs[idx % hrefs.length],
+            }));
+          }
         }
         let renderedHtml = sectionTemplates[section.type]({
           ...sectionData,

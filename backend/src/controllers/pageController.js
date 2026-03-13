@@ -156,6 +156,30 @@ export const updateSections = async (req, res, next) => {
     if (!page) return res.status(404).json({ error: 'Page not found' });
 
     page.sections = req.body.sections;
+
+    // Auto-inject service links: each service points to another keyword page
+    const hasServicesGrid = page.sections.some(s => s.type === 'services-grid');
+    if (hasServicesGrid) {
+      const siblingPages = await Page.find({
+        siteId: page.siteId,
+        _id: { $ne: page._id },
+        type: { $in: ['homepage', 'subpage'] },
+      }).select('slug isMainHomepage').sort({ sortOrder: 1 }).lean();
+
+      if (siblingPages.length > 0) {
+        const siblingHrefs = siblingPages.map(p =>
+          p.isMainHomepage ? 'index.html' : `${p.slug}.html`
+        );
+        for (const section of page.sections) {
+          if (section.type === 'services-grid' && section.data?.services?.length) {
+            section.data.services.forEach((svc, idx) => {
+              svc.linkUrl = siblingHrefs[idx % siblingHrefs.length];
+            });
+          }
+        }
+      }
+    }
+
     page.markModified('sections');
     await page.save();
     res.json({ page });

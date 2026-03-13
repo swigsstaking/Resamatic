@@ -96,17 +96,30 @@ export default function SiteCreatePage() {
 
       // Create pages
       const totalPages = form.pages.length + 1; // +1 for contact page
+
+      // Step 1: Create all pages first to get real slugs from backend
+      const createdPages = [];
       for (const pageConf of form.pages) {
         const page = await pagesApi.create(site._id, {
           title: pageConf.title || pageConf.keyword,
           type: pageConf.isMain ? 'homepage' : 'subpage',
           isMainHomepage: pageConf.isMain,
         });
+        const realSlug = page.page.slug;
+        createdPages.push({
+          conf: pageConf,
+          page: page.page,
+          slug: realSlug,
+          href: page.page.isMainHomepage ? 'index.html' : `${realSlug}.html`,
+        });
+      }
 
-        // AI generation if requested
+      // Step 2: AI generation with correct links
+      for (const created of createdPages) {
+        const pageConf = created.conf;
         if (useAI && pageConf.keyword) {
           setAiLoading(true);
-          const pageIdx = form.pages.indexOf(pageConf);
+          const pageIdx = createdPages.indexOf(created);
           setAiProgress(`Page ${pageIdx + 1}/${totalPages} : ${pageConf.keyword}`);
           try {
             const { content } = await aiApi.generatePage({
@@ -116,7 +129,7 @@ export default function SiteCreatePage() {
             });
 
             // Map AI content to sections
-            const sections = page.page.sections.map(s => {
+            const sections = created.page.sections.map(s => {
               const sData = { ...s };
               switch (s.type) {
                 case 'hero':
@@ -166,10 +179,10 @@ export default function SiteCreatePage() {
               return sData;
             });
 
-            await pagesApi.updateSections(page.page._id, sections);
+            await pagesApi.updateSections(created.page._id, sections);
 
             if (content.seo) {
-              await pagesApi.update(page.page._id, { seo: content.seo });
+              await pagesApi.update(created.page._id, { seo: content.seo });
             }
           } catch (err) {
             console.error('AI generation error for page:', err);

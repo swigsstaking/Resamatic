@@ -5,8 +5,8 @@
     <div class="services-grid">
       {{#each services}}
         <div class="service-card">
-          {{#if this.imageUrl}}
-            <div class="service-card-img">
+          <div class="service-card-img">
+            {{#if this.imageUrl}}
               <img
                 src="{{this.imageUrl}}"
                 {{#if this.imageMediaId_srcset}}srcset="{{this.imageMediaId_srcset}}"{{/if}}
@@ -14,8 +14,12 @@
                 alt="{{this.name}}"
                 loading="lazy"
               >
-            </div>
-          {{/if}}
+            {{else}}
+              <div class="img-placeholder" data-editable="services.{{@index}}.imageMediaId">
+                <span style="color:#9ca3af;font-size:0.875rem;">Cliquez pour ajouter une image</span>
+              </div>
+            {{/if}}
+          </div>
           <h3 data-editable="services.{{@index}}.name">{{this.name}}</h3>
           {{#if this.shortDescription}}<p data-editable="services.{{@index}}.shortDescription">{{this.shortDescription}}</p>{{/if}}
           {{#if this.linkUrl}}
