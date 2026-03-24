@@ -818,7 +818,7 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
     case 'guarantee': return <>{colorBar}{text("Titre", "title")}{richText("Texte", "text")}</>;
     case 'testimonials': return <>{colorBar}{text("Titre", "title")}{list("Témoignages", "items", [{key:'name',label:'Nom'},{key:'location',label:'Ville'},{key:'rating',label:'Note'},{key:'text',label:'Témoignage',multiline:true}], "Témoignage")}</>;
     case 'faq': return <>{colorBar}{text("Titre", "title")}{list("Questions", "items", [{key:'question',label:'Question'},{key:'answer',label:'Réponse',multiline:true}], "Question")}</>;
-    case 'team': return <>{colorBar}{text("Titre", "title")}{richText("Contenu", "body")}{list("Membres", "members", [{key:'name',label:'Nom'},{key:'role',label:'Rôle'},{key:'bio',label:'Bio',multiline:true}], "Membre")}</>;
+    case 'team': return <>{colorBar}{text("Titre", "title")}{richText("Contenu", "body")}{image("Image", "imageMediaId")}{list("Membres", "members", [{key:'name',label:'Nom'},{key:'role',label:'Rôle'},{key:'bio',label:'Bio',multiline:true}], "Membre")}</>;
     case 'map': return <>{colorBar}{text("Titre", "title")}{text("Adresse", "address")}{text("Horaires", "hours")}{text("Téléphone", "phone")}{text("Email", "email")}{text("URL Google Maps", "embedUrl", { multiline: true })}</>;
     default: return <p className="text-xs text-gray-400 text-center py-4">Section non éditable</p>;
   }

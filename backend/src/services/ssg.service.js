@@ -71,6 +71,19 @@ function hexToRgb(hex) {
   return `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
 }
 
+function getContrastColor(hexBg) {
+  const h = (hexBg || '').replace('#', '');
+  if (h.length < 6) return '#333333';
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  // sRGB luminance (WCAG)
+  const lum = 0.2126 * (r <= 0.03928 ? r / 12.92 : ((r + 0.055) / 1.055) ** 2.4)
+            + 0.7152 * (g <= 0.03928 ? g / 12.92 : ((g + 0.055) / 1.055) ** 2.4)
+            + 0.0722 * (b <= 0.03928 ? b / 12.92 : ((b + 0.055) / 1.055) ** 2.4);
+  return lum > 0.35 ? '#333333' : '#ffffff';
+}
+
 function generateCssVars(design) {
   const primary = design.primaryColor || '#12203e';
   const isSquare = design.borderRadius === 'square';
@@ -315,14 +328,18 @@ export async function buildSite(siteId) {
           sectionType: section.type,
         });
 
-        // Inject inline styles for section color overrides
+        // Inject inline styles for section color overrides (auto-contrast if textColor missing)
         const sectionStyle = section.data?.style;
         if (sectionStyle?.backgroundColor || sectionStyle?.textColor) {
+          const bg = sectionStyle.backgroundColor;
+          const textColor = sectionStyle.textColor || (bg ? getContrastColor(bg) : '');
           const inlineStyle = [
-            sectionStyle.backgroundColor ? `background-color:${sectionStyle.backgroundColor}` : '',
-            sectionStyle.textColor ? `color:${sectionStyle.textColor}` : '',
+            bg ? `background-color:${bg}` : '',
+            textColor ? `color:${textColor}` : '',
           ].filter(Boolean).join(';');
+          const cssClass = textColor === '#ffffff' ? ' section-dark-bg' : '';
           renderedHtml = renderedHtml.replace(/^<section(\s)/, `<section style="${inlineStyle}"$1`);
+          if (cssClass) renderedHtml = renderedHtml.replace(/class="([^"]*)"/, `class="$1${cssClass}"`);
         }
 
         renderedSections.push(renderedHtml);

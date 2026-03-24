@@ -1,17 +1,27 @@
 <section class="section section-team" data-section="team">
   <div class="container">
-    {{#if title}}<h2 class="team-title" data-editable="title">{{title}}</h2>{{/if}}
-    {{#if body}}<div class="team-body" data-editable="body">{{{body}}}</div>{{/if}}
-    {{#if members.length}}
-      <ul class="team-list">
-        {{#each members}}
-          <li>
-            <strong data-editable="members.{{@index}}.name">{{this.name}}</strong>
-            {{#if this.role}} - <span class="team-role-inline" data-editable="members.{{@index}}.role">{{this.role}}</span>{{/if}}
-            {{#if this.bio}}<p data-editable="members.{{@index}}.bio">{{this.bio}}</p>{{/if}}
-          </li>
-        {{/each}}
-      </ul>
-    {{/if}}
+    <div class="team-layout">
+      {{#if imageUrl}}
+        <div class="team-image-col">
+          <img src="{{imageUrl}}" alt="{{title}}" loading="lazy"
+            {{#if imageSrcset}}srcset="{{imageSrcset}}" sizes="(max-width: 768px) 100vw, 45vw"{{/if}} />
+        </div>
+      {{/if}}
+      <div class="team-content-col{{#unless imageUrl}} team-content-full{{/unless}}">
+        {{#if title}}<h2 class="team-title" data-editable="title">{{title}}</h2>{{/if}}
+        {{#if body}}<div class="team-body" data-editable="body">{{{body}}}</div>{{/if}}
+        {{#if members.length}}
+          <ul class="team-list">
+            {{#each members}}
+              <li>
+                <strong data-editable="members.{{@index}}.name">{{this.name}}</strong>
+                {{#if this.role}} - <span class="team-role-inline" data-editable="members.{{@index}}.role">{{this.role}}</span>{{/if}}
+                {{#if this.bio}}<p data-editable="members.{{@index}}.bio">{{this.bio}}</p>{{/if}}
+              </li>
+            {{/each}}
+          </ul>
+        {{/if}}
+      </div>
+    </div>
   </div>
 </section>
