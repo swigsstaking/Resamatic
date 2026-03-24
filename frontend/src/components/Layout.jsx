@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useParams, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Globe, Settings, FileText, Image, Search, LogOut, Plus, Rocket } from 'lucide-react';
+import { LayoutDashboard, Globe, Settings, FileText, Image, Search, LogOut, Plus, Rocket, ArrowLeft } from 'lucide-react';
 import useAuthStore from '../stores/authStore';
 import useSiteStore from '../stores/siteStore';
 import { useEffect } from 'react';
@@ -40,12 +40,20 @@ export default function Layout() {
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto" aria-label="Navigation principale">
-          <NavLink to="/" end className={linkClass}>
-            <LayoutDashboard size={18} /> Dashboard
-          </NavLink>
-          <NavLink to="/sites/new" className={linkClass}>
-            <Plus size={18} /> Nouveau site
-          </NavLink>
+          {siteId ? (
+            <NavLink to="/" end className={linkClass}>
+              <ArrowLeft size={18} /> Retourner au dashboard
+            </NavLink>
+          ) : (
+            <>
+              <NavLink to="/" end className={linkClass}>
+                <LayoutDashboard size={18} /> Dashboard
+              </NavLink>
+              <NavLink to="/sites/new" className={linkClass}>
+                <Plus size={18} /> Nouveau site
+              </NavLink>
+            </>
+          )}
 
           {siteId && currentSite && (
             <>
@@ -77,7 +85,7 @@ export default function Layout() {
               <LogOut size={18} />
             </button>
           </div>
-          <span className="text-xs text-gray-400 mt-1 block">v0.7.0</span>
+          <span className="text-xs text-gray-400 mt-1 block">v0.1.7</span>
         </div>
       </aside>
 

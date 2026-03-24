@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Globe, Settings, FileText, Trash2, Copy, ExternalLink } from 'lucide-react';
+import { Plus, Globe, Pencil, Eye, Trash2, Copy, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useSiteStore from '../stores/siteStore';
 import { sitesApi, deployApi } from '../services/api';
@@ -61,7 +61,7 @@ export default function DashboardPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sites.map((site) => (
-            <div key={site._id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+            <div key={site._id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer" onClick={(e) => { if (e.target.closest('button, a')) return; navigate(`/sites/${site._id}/pages`); }}>
               <div className="p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div>
@@ -82,11 +82,11 @@ export default function DashboardPage() {
                 )}
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Link to={`/sites/${site._id}/pages`} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                    <FileText size={14} /> Pages
+                  <Link to={`/sites/${site._id}/pages`} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors" onClick={e => e.stopPropagation()}>
+                    <Pencil size={14} /> Modifier
                   </Link>
-                  <Link to={`/sites/${site._id}/settings`} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                    <Settings size={14} /> Paramètres
+                  <Link to={`/sites/${site._id}/pages`} state={{ preview: true }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors" onClick={e => e.stopPropagation()}>
+                    <Eye size={14} /> Aperçu
                   </Link>
                   <PublishButton siteId={site._id} status={site.status} domain={site.domain} compact />
                 </div>
