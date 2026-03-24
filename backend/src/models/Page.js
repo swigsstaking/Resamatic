@@ -6,7 +6,7 @@ const sectionSchema = new mongoose.Schema({
     required: true,
     enum: [
       'hero', 'text-highlight', 'description', 'why-us', 'google-reviews', 'cta-banner',
-      'services-grid', 'services-detail', 'guarantee', 'testimonials',
+      'services-grid', 'guarantee', 'testimonials',
       'faq', 'team', 'map',
     ],
   },

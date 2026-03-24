@@ -1,4 +1,5 @@
 import Site from '../models/Site.js';
+import Page from '../models/Page.js';
 import * as aiService from '../services/ai.service.js';
 
 export const generatePage = async (req, res, next) => {
@@ -37,6 +38,39 @@ export const generateSeo = async (req, res, next) => {
 
     const seo = await aiService.generateSeoMetadata(site, pageContent);
     res.json({ seo });
+  } catch (err) { next(err); }
+};
+
+export const optimizeSeo = async (req, res, next) => {
+  try {
+    const { siteId } = req.body;
+    if (!siteId) return res.status(400).json({ error: 'siteId required' });
+
+    const site = await Site.findById(siteId).lean();
+    if (!site) return res.status(404).json({ error: 'Site not found' });
+
+    const pages = await Page.find({ siteId }).lean();
+    const pagesData = pages.map(p => ({
+      _id: p._id,
+      title: p.title,
+      keyword: p.title,
+      serviceFocus: p.title,
+      seo: p.seo || {},
+    }));
+
+    const optimized = await aiService.optimizeSeoAcrossPages(site, pagesData);
+
+    // Apply optimized SEO to each page
+    const results = [];
+    for (const opt of optimized) {
+      const page = pages[opt.index];
+      if (page && opt.seo) {
+        await Page.findByIdAndUpdate(page._id, { seo: opt.seo });
+        results.push({ pageId: page._id, title: page.title, seo: opt.seo });
+      }
+    }
+
+    res.json({ pages: results });
   } catch (err) { next(err); }
 };
 

@@ -351,6 +351,16 @@ export default function SiteCreatePage() {
         console.error('Contact page creation error:', err);
       }
 
+      // Optimize SEO across all pages (avoid keyword cannibalization)
+      if (useAI) {
+        try {
+          setAiProgress('Optimisation SEO inter-pages...');
+          await aiApi.optimizeSeo(site._id);
+        } catch (err) {
+          console.warn('[SEO] Cross-page optimization failed:', err.message);
+        }
+      }
+
       setAiLoading(false);
       trackSiteCreated(site, { pageCount: form.pages.length + 1, useAI, imageCount: images.length });
       if (uploadedMediaIds.length > 0) trackMediaUploaded(site._id, uploadedMediaIds.length);

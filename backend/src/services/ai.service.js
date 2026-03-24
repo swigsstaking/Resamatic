@@ -135,7 +135,7 @@ export async function generatePageContent(site, pageConfig) {
   const prompt1 = `${bizContext}
 
 Génère du contenu engageant et SEO. Le H1 ne doit PAS répéter la ville si elle est déjà dans le mot-clé. JSON:
-{"hero":{"headline":"H1 max 70 car","subheadline":"sous-titre 120 car","ctaText":"${cta}","ctaUrl":"${ctaUrl}","bulletPoints":[{"value":"point 1"},{"value":"point 2"},{"value":"point 3"},{"value":"point 4"},{"value":"point 5"}]},"textHighlight":{"text":"2 phrases avec <strong>mots-clés</strong> en gras"},"description":{"title":"Question engageante avec mot-clé ?","body":"<p>3-4 phrases service principal avec <strong>gras</strong></p><p>2-3 phrases qualifications et cadre</p>","bulletPoints":[{"value":"avantage 1"},{"value":"avantage 2"},{"value":"avantage 3"},{"value":"avantage 4"}],"ctaText":"${cta}","ctaUrl":"${ctaUrl}"},"whyUs":{"title":"Pourquoi choisir ${name}${city ? ' à '+city : ''} ?","subtitle":"une phrase expertise","body":"<p>3-4 phrases expertise et méthode</p>","reasons":[{"title":"raison 1","text":"1-2 phrases"},{"title":"raison 2","text":"1-2 phrases"},{"title":"raison 3","text":"1-2 phrases"},{"title":"raison 4","text":"1-2 phrases"}],"ctaText":"${cta}","ctaUrl":"${ctaUrl}"},"ctaBanner":{"text":"accroche forte courte","ctaText":"Contactez-nous","ctaUrl":"${ctaUrl}","bannerStyle":"dark"},"seo":{"title":"max 60 car SEO","description":"max 150 car STRICT, pas plus","keywords":["5 mots-clés"]}}`;
+{"hero":{"headline":"H1 max 70 car","subheadline":"sous-titre 120 car","ctaText":"${cta}","ctaUrl":"${ctaUrl}","bulletPoints":[{"value":"point 1"},{"value":"point 2"},{"value":"point 3"},{"value":"point 4"},{"value":"point 5"}]},"textHighlight":{"text":"2 phrases avec <strong>mots-clés</strong> en gras"},"description":{"title":"Question engageante avec mot-clé ?","body":"<p>3-4 phrases service principal avec <strong>gras</strong></p><p>2-3 phrases qualifications et cadre</p>","bulletPoints":[{"value":"avantage 1"},{"value":"avantage 2"},{"value":"avantage 3"},{"value":"avantage 4"}],"ctaText":"${cta}","ctaUrl":"${ctaUrl}"},"whyUs":{"title":"Pourquoi choisir ${name}${city ? ' à '+city : ''} ?","subtitle":"une phrase expertise","body":"<p>3-4 phrases expertise et méthode</p>","reasons":[{"title":"raison 1","text":"1-2 phrases"},{"title":"raison 2","text":"1-2 phrases"},{"title":"raison 3","text":"1-2 phrases"},{"title":"raison 4","text":"1-2 phrases"}],"ctaText":"${cta}","ctaUrl":"${ctaUrl}"},"ctaBanner":{"text":"accroche forte courte","ctaText":"Contactez-nous","ctaUrl":"${ctaUrl}","bannerStyle":"dark"},"seo":{"title":"max 60 car, DOIT contenir ${city || 'la ville'}","description":"max 155 car, mentionne ${city || 'la ville'}, unique et engageante","keywords":["5 mots-clés SEO locaux incluant ${city || 'ville'}"]}}`;
 
   // Call 2: Secondary sections (googleReviews, servicesGrid, guarantee, testimonials, faq, team, map)
   const prompt2 = `${bizContext}
@@ -233,6 +233,56 @@ export async function rewriteText(text, instruction) {
   ], { temperature: 0.7 });
 
   return content.trim();
+}
+
+export async function optimizeSeoAcrossPages(site, pages) {
+  const biz = site.business || {};
+  const name = biz.name || site.name;
+  const city = biz.city || '';
+  const activity = biz.activity || '';
+
+  const pagesInfo = pages.map((p, i) => ({
+    index: i,
+    title: p.title,
+    keyword: p.keyword || '',
+    serviceFocus: p.serviceFocus || '',
+    currentSeo: p.seo || {},
+  }));
+
+  const sysPrompt = `Tu es un expert SEO local spécialisé dans l'optimisation multi-pages. Tu dois optimiser les meta tags de TOUTES les pages d'un même site pour maximiser le référencement local sans cannibalisation. Réponds UNIQUEMENT en JSON valide.`;
+
+  const prompt = `Entreprise: ${name} | Activité: ${activity} | Ville: ${city}
+
+Optimise les meta tags SEO de ces ${pages.length} pages pour éviter la cannibalisation et maximiser le SEO local.
+
+RÈGLES STRICTES:
+- Chaque title DOIT contenir "${city}" — c'est obligatoire pour le SEO local
+- Chaque title est UNIQUE, max 60 caractères, mot-clé principal en début
+- Chaque description est UNIQUE, max 155 caractères, mentionne "${city}", engageante avec call-to-action
+- Les keywords sont COMPLÉMENTAIRES entre pages — AUCUN doublon de mot-clé entre pages
+- Chaque page a 5 keywords incluant des variantes locales (${city}, quartiers proches, département)
+- Le mot-clé principal de chaque page doit être DIFFÉRENT des autres pages
+
+Pages à optimiser:
+${pagesInfo.map(p => `- Page ${p.index}: "${p.title}" | Mot-clé: "${p.keyword}" | Service: "${p.serviceFocus}" | SEO actuel: title="${p.currentSeo.title || ''}" desc="${p.currentSeo.description || ''}"`).join('\n')}
+
+JSON attendu (un objet par page, indexé):
+{"pages":[${pagesInfo.map(p => `{"index":${p.index},"seo":{"title":"...","description":"...","keywords":["..."]}}`).join(',')}]}`;
+
+  const messages = [{ role: 'system', content: sysPrompt }, { role: 'user', content: prompt }];
+  const opts = { temperature: 0.5, maxTokens: 4000, timeout: 120000 };
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const raw = await chat(messages, opts);
+      const result = parseJson(raw);
+      return result.pages || result;
+    } catch (err) {
+      if (attempt === 1) {
+        console.warn(`[AI] SEO optimization attempt 1 failed (${err.message}), retrying...`);
+      } else throw err;
+    }
+  }
 }
 
 export async function generateAltText(imageDescription) {

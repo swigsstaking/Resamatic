@@ -31,7 +31,7 @@ async function loadTemplates() {
   // Register section partials
   const sectionTypes = [
     'hero', 'description', 'why-us', 'google-reviews', 'cta-banner',
-    'services-grid', 'services-detail', 'guarantee', 'testimonials',
+    'services-grid', 'guarantee', 'testimonials',
     'faq', 'team', 'map', 'text-highlight',
   ];
   for (const type of sectionTypes) {

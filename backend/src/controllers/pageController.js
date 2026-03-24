@@ -16,12 +16,11 @@ const DEFAULT_SECTIONS = [
   { type: 'google-reviews', order: 4, data: { title: 'Avis Google', reviewCount: 0, rating: 5, ctaText: 'Voir nos avis', ctaUrl: '', style: { backgroundColor: '', textColor: '' } } },
   { type: 'cta-banner', order: 5, data: { text: '', ctaText: 'Contactez-nous', ctaUrl: 'contact.html', bannerStyle: 'dark', style: { backgroundColor: '', textColor: '' } } },
   { type: 'services-grid', order: 6, data: { title: 'Nos services', services: [], style: { backgroundColor: '', textColor: '' } } },
-  { type: 'services-detail', order: 7, data: { title: '', services: [], style: { backgroundColor: '', textColor: '' } } },
-  { type: 'guarantee', order: 8, data: { title: 'Garantie de satisfaction', text: '', percentage: 100, icon: 'shield-check', style: { backgroundColor: '', textColor: '' } } },
-  { type: 'testimonials', order: 9, data: { title: 'Ce que nos clients en pensent', items: [], style: { backgroundColor: '', textColor: '' } } },
-  { type: 'faq', order: 10, data: { title: 'Questions fréquentes', items: [], style: { backgroundColor: '', textColor: '' } } },
-  { type: 'team', order: 11, data: { title: 'Notre équipe', members: [], style: { backgroundColor: '', textColor: '' } } },
-  { type: 'map', order: 12, data: { title: 'Nous trouver', embedUrl: '', address: '', phone: '', email: '', style: { backgroundColor: '', textColor: '' } } },
+  { type: 'guarantee', order: 7, data: { title: 'Garantie de satisfaction', text: '', percentage: 100, icon: 'shield-check', style: { backgroundColor: '', textColor: '' } } },
+  { type: 'testimonials', order: 8, data: { title: 'Ce que nos clients en pensent', items: [], style: { backgroundColor: '', textColor: '' } } },
+  { type: 'faq', order: 9, data: { title: 'Questions fréquentes', items: [], style: { backgroundColor: '', textColor: '' } } },
+  { type: 'team', order: 10, data: { title: 'Notre équipe', members: [], style: { backgroundColor: '', textColor: '' } } },
+  { type: 'map', order: 11, data: { title: 'Nous trouver', embedUrl: '', address: '', phone: '', email: '', style: { backgroundColor: '', textColor: '' } } },
 ];
 
 const DEFAULT_CONTACT_SECTIONS = [
