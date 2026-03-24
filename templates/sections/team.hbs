@@ -4,7 +4,7 @@
       {{#if imageUrl}}
         <div class="team-image-col">
           <img src="{{imageUrl}}" alt="{{title}}" loading="lazy"
-            {{#if imageSrcset}}srcset="{{imageSrcset}}" sizes="(max-width: 768px) 100vw, 45vw"{{/if}} />
+            {{#if imageMediaId_srcset}}srcset="{{imageMediaId_srcset}}" sizes="(max-width: 768px) 100vw, 45vw"{{/if}} />
         </div>
       {{/if}}
       <div class="team-content-col{{#unless imageUrl}} team-content-full{{/unless}}">

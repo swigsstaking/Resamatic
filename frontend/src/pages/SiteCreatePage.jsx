@@ -266,6 +266,9 @@ export default function SiteCreatePage() {
                 if (s.type === 'why-us' && !s.data.imageMediaId) {
                   s.data.imageMediaId = nextImg();
                 }
+                if (s.type === 'team' && !s.data.imageMediaId) {
+                  s.data.imageMediaId = nextImg();
+                }
                 if (s.type === 'services-grid' && s.data.services) {
                   s.data.services = s.data.services.map(svc => ({
                     ...svc,
@@ -295,6 +298,7 @@ export default function SiteCreatePage() {
             if (s.type === 'hero') sData.data = { ...s.data, backgroundMediaId: nextImg() };
             if (s.type === 'description') sData.data = { ...s.data, imageMediaId: nextImg() };
             if (s.type === 'why-us') sData.data = { ...s.data, imageMediaId: nextImg() };
+            if (s.type === 'team') sData.data = { ...s.data, imageMediaId: nextImg() };
             if (s.type === 'services-grid' && s.data.services) {
               sData.data = { ...s.data, services: s.data.services.map(svc => ({ ...svc, imageMediaId: nextImg() })) };
             }
