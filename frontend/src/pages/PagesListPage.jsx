@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { pagesApi, buildApi } from '../services/api';
 import PublishButton from '../components/PublishButton';
 import useSiteStore from '../stores/siteStore';
+import { trackSitePreview, trackEvent } from '../lib/posthog';
 
 export default function PagesListPage() {
   const { siteId } = useParams();
@@ -38,6 +39,7 @@ export default function PagesListPage() {
     if (!confirm(`Supprimer "${title}" ?`)) return;
     try {
       await pagesApi.delete(id);
+      trackEvent('page_deleted', { site_id: siteId, page_title: title });
       toast.success('Page supprimée');
       fetchPages();
     } catch { toast.error('Erreur'); }
@@ -46,6 +48,7 @@ export default function PagesListPage() {
   const handlePreview = async () => {
     try {
       await buildApi.trigger(siteId);
+      trackSitePreview(siteId);
       toast.success('Build lancé — aperçu dans quelques secondes');
       setTimeout(() => {
         window.open(`/api/build/${siteId}/preview/index.html`, '_blank');

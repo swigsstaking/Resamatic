@@ -1,7 +1,8 @@
 import { useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import useAuthStore from './stores/authStore';
 import Layout from './components/Layout';
+import { identifyUser, trackPageView } from './lib/posthog';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -29,12 +30,23 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
-  const { token, fetchUser, loading } = useAuthStore();
+  const { token, fetchUser, loading, user } = useAuthStore();
+  const location = useLocation();
 
   useEffect(() => {
     if (token) fetchUser();
     else useAuthStore.setState({ loading: false });
   }, []);
+
+  // Identify user in PostHog once loaded
+  useEffect(() => {
+    if (user?.email) identifyUser(user.email);
+  }, [user]);
+
+  // Track page views on route change
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
 
   if (loading) return <Loader />;
 

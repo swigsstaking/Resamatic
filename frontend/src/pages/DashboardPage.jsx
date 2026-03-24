@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import useSiteStore from '../stores/siteStore';
 import { sitesApi, deployApi } from '../services/api';
 import PublishButton from '../components/PublishButton';
+import { trackEvent } from '../lib/posthog';
 
 const STATUS_BADGES = {
   draft: 'bg-gray-100 text-gray-600',
@@ -23,6 +24,7 @@ export default function DashboardPage() {
     if (!confirm(`Supprimer le site "${name}" ? Cette action est irréversible.`)) return;
     try {
       await deleteSite(id);
+      trackEvent('site_deleted', { site_id: id, site_name: name });
       toast.success('Site supprimé');
     } catch { toast.error('Erreur lors de la suppression'); }
   };
@@ -30,6 +32,7 @@ export default function DashboardPage() {
   const handleDuplicate = async (id) => {
     try {
       const { site } = await sitesApi.duplicate(id);
+      trackEvent('site_duplicated', { source_site_id: id, new_site_id: site._id, site_name: site.name });
       fetchSites();
       toast.success(`Site dupliqué : ${site.name}`);
     } catch { toast.error('Erreur lors de la duplication'); }

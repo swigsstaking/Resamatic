@@ -3,6 +3,7 @@ import { Rocket, Loader, CheckCircle, AlertCircle, X, Copy, Check, Globe, Extern
 import toast from 'react-hot-toast';
 import { deployApi } from '../services/api';
 import useSiteStore from '../stores/siteStore';
+import { trackSitePublished } from '../lib/posthog';
 
 const SERVER_IP = '213.221.149.157';
 
@@ -55,6 +56,7 @@ export default function PublishButton({ siteId, status, domain, compact = false 
           if (data.status === 'published') {
             clearInterval(pollRef.current);
             setPublishing(false);
+            trackSitePublished(siteId, currentSite?.name, siteDomain);
             toast.success(`Site publié sur ${siteDomain}`);
             fetchSites();
           } else if (data.status === 'error') {

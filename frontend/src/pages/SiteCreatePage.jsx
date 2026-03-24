@@ -5,6 +5,7 @@ import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 import useSiteStore from '../stores/siteStore';
 import { pagesApi, aiApi, buildApi, mediaApi } from '../services/api';
+import { trackSiteCreated, trackMediaUploaded, trackAIGeneration } from '../lib/posthog';
 
 const STEPS = ['1. Entreprise & contact', '2. Design & couleurs', '3. Pages & mots-clés'];
 
@@ -309,6 +310,8 @@ export default function SiteCreatePage() {
       }
 
       setAiLoading(false);
+      trackSiteCreated(site, { pageCount: form.pages.length + 1, useAI, imageCount: images.length });
+      if (uploadedMediaIds.length > 0) trackMediaUploaded(site._id, uploadedMediaIds.length);
       try {
         await buildApi.trigger(site._id);
       } catch {}
