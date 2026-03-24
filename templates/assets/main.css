@@ -304,21 +304,25 @@
 /* ===== REVIEWS (2-column: testimonials left, count right) ===== */
 .section-reviews {
   background: #fff;
-  padding: 3.5rem 0;
+  padding: 2.5rem 0;
 }
+/* Zone haute : titre + avis (gauche) | compteur (droite) */
 .reviews-two-col {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
-  gap: 4rem;
+  gap: 3rem;
   align-items: start;
+}
+.reviews-left-col .section-title {
+  margin-bottom: 1.25rem;
 }
 .reviews-testimonials-col {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 .review-quote {
-  padding: 1.5rem;
+  padding: 1.15rem 1.25rem;
   background: #f9fafb;
   border-radius: var(--radius-sm);
   border-left: 3px solid var(--color-accent);
@@ -326,13 +330,13 @@
 .review-quote blockquote {
   font-style: italic;
   color: #444;
-  line-height: 1.7;
-  margin-bottom: 0.75rem;
-  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
 }
 .review-quote cite {
   font-style: normal;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #595959;
   font-weight: 500;
 }
@@ -371,6 +375,69 @@
   margin-left: 0.75rem;
   font-weight: 700;
   font-size: 1.2rem;
+}
+/* Zone basse : cartes Google compactes */
+.reviews-google-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #eee;
+}
+.review-card-google {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius-sm);
+  padding: 0.9rem 1rem;
+  transition: box-shadow 0.2s;
+}
+.review-card-google:hover {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.review-card-stars .star {
+  font-size: 0.9rem;
+  margin: 0 1px;
+}
+.review-card-text {
+  font-size: 0.85rem;
+  color: #444;
+  line-height: 1.55;
+  margin: 0.5rem 0 0.75rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.review-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.review-card-author {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #333;
+}
+.review-card-date {
+  font-size: 0.72rem;
+  color: #999;
+}
+/* Responsive reviews */
+@media (max-width: 768px) {
+  .reviews-two-col {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .reviews-count-col {
+    order: -1;
+    padding: 1rem;
+  }
+  .reviews-count { font-size: 3.5rem; }
+  .reviews-google-cards {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ===== CTA BANNER (rounded container) ===== */

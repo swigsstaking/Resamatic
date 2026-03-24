@@ -36,6 +36,7 @@ export const sitesApi = {
   update: (id, data) => api.put(`/sites/${id}`, data),
   delete: (id) => api.delete(`/sites/${id}`),
   duplicate: (id) => api.post(`/sites/${id}/duplicate`),
+  fetchGoogleReviews: (id) => api.post(`/sites/${id}/fetch-reviews`),
 };
 
 export const pagesApi = {

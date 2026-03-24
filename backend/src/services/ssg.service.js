@@ -283,10 +283,13 @@ export async function buildSite(siteId) {
 
         // Inject business data into sections that need it
         if (section.type === 'google-reviews') {
+          const allTestimonials = sectionData.testimonials || [];
           sectionData = {
             ...sectionData,
             reviewCount: sectionData.reviewCount || site.business?.googleReviewCount || 0,
             rating: sectionData.rating || site.business?.googleReviewRating || 5,
+            aiReviews: allTestimonials.filter(t => !t.isGoogle).slice(0, 2),
+            googleReviews: allTestimonials.filter(t => t.isGoogle),
           };
         }
         if (section.type === 'map') {

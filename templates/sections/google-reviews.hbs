@@ -1,14 +1,18 @@
 <section class="section section-reviews" data-section="google-reviews">
   <div class="container">
-    {{#if title}}<h2 class="section-title" data-editable="title">{{title}}</h2>{{/if}}
+
+    {{!-- Zone haute : titre + 2 avis IA (gauche) | compteur Google (droite) --}}
     <div class="reviews-two-col">
-      <div class="reviews-testimonials-col">
-        {{#each testimonials}}
-          <div class="review-quote">
-            <blockquote>{{this.text}}</blockquote>
-            <cite>- {{this.name}}{{#if this.location}}, {{this.location}}{{/if}}</cite>
-          </div>
-        {{/each}}
+      <div class="reviews-left-col">
+        {{#if title}}<h2 class="section-title" data-editable="title">{{title}}</h2>{{/if}}
+        <div class="reviews-testimonials-col">
+          {{#each aiReviews}}
+            <div class="review-quote">
+              <blockquote>{{this.text}}</blockquote>
+              <cite>- {{this.name}}{{#if this.location}}, {{this.location}}{{/if}}</cite>
+            </div>
+          {{/each}}
+        </div>
       </div>
       <div class="reviews-count-col">
         <span class="reviews-count" data-editable="reviewCount">+{{reviewCount}}</span>
@@ -30,5 +34,23 @@
         {{#if ctaText}}<a href="{{ctaUrl}}" class="btn btn-outline-dark" target="_blank" rel="noopener">{{ctaText}}</a>{{/if}}
       </div>
     </div>
+
+    {{!-- Zone basse : vrais avis Google en cartes compactes --}}
+    {{#if googleReviews.length}}
+    <div class="reviews-google-cards">
+      {{#each googleReviews}}
+        <div class="review-card-google">
+          <div class="review-card-stars">
+            {{#times this.rating}}<span class="star">&#9733;</span>{{/times}}
+          </div>
+          <p class="review-card-text">{{this.text}}</p>
+          <div class="review-card-footer">
+            <span class="review-card-author">{{this.name}}</span>
+            {{#if this.publishedAt}}<span class="review-card-date">{{this.publishedAt}}</span>{{/if}}
+          </div>
+        </div>
+      {{/each}}
+    </div>
+    {{/if}}
   </div>
 </section>

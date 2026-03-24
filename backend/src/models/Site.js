@@ -27,8 +27,11 @@ const siteSchema = new mongoose.Schema({
     },
     openingHours: [{ day: String, hours: String }],
     googleMapsEmbed: String,
+    googleMapsUrl: String,
+    googlePlaceId: String,
     googleReviewCount: Number,
     googleReviewRating: Number,
+    googleReviewUrl: String,
   },
 
   // Design

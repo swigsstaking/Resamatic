@@ -9,7 +9,7 @@ import {
   Monitor, Tablet, Smartphone, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { pagesApi, buildApi, aiApi } from '../services/api';
+import { pagesApi, buildApi, aiApi, sitesApi } from '../services/api';
 import useSiteStore from '../stores/siteStore';
 import MediaPicker from '../components/MediaPicker';
 import RichTextEditor from '../components/RichTextEditor';
@@ -668,6 +668,7 @@ function SwatchRow({ label, swatches, current, onPick }) {
 */
 function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site }) {
   const d = section.data || {};
+  const [fetchingReviews, setFetchingReviews] = useState(false);
 
   const text = (label, field, opts = {}) => (
     <div key={field} className="mb-2.5" data-editor-field={field}>
@@ -777,7 +778,9 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
                 </button>
               </div>
               {itemFields.map(({ key, label: fl, multiline, placeholder, type: fType }) => (
-                <div key={key}>
+                fType === 'badge' ? (
+                  item[key] ? <div key={key}><span className="inline-block px-1.5 py-0.5 text-[9px] font-medium bg-blue-100 text-blue-700 rounded">{fl}</span></div> : null
+                ) : <div key={key}>
                   <label className="text-[9px] text-gray-400">{fl}</label>
                   {fType === 'image' ? (
                     <button
@@ -810,7 +813,7 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
     case 'text-highlight': return <>{colorBar}{richText("Texte", "text")}</>;
     case 'description': return <>{colorBar}{text("Titre", "title")}{richText("Contenu", "body")}{list("Points clés", "bulletPoints", [{key:'value',label:'Point'}], "Point")}{text("Texte du bouton", "ctaText")}{text("Lien du bouton", "ctaUrl")}{image("Image", "imageMediaId")}{select("Position image", "imagePosition", [{value:'right',label:'Droite'},{value:'left',label:'Gauche'}])}</>;
     case 'why-us': return <>{colorBar}{text("Titre", "title")}{text("Sous-titre", "subtitle")}{richText("Contenu", "body")}{image("Image", "imageMediaId")}{list("Points clés", "reasons", [{key:'title',label:'Titre'},{key:'text',label:'Description'}], "Point")}{text("Texte du bouton", "ctaText")}{text("Lien du bouton", "ctaUrl")}</>;
-    case 'google-reviews': return <>{colorBar}{text("Titre", "title")}{text("Nombre d'avis", "reviewCount")}{text("Note", "rating")}{list("Témoignages", "testimonials", [{key:'text',label:'Témoignage',multiline:true},{key:'name',label:'Nom'},{key:'location',label:'Ville'}], "Témoignage")}{text("Texte du bouton", "ctaText")}{text("Lien des avis", "ctaUrl")}</>;
+    case 'google-reviews': return <>{colorBar}{text("Titre", "title")}{text("Nombre d'avis", "reviewCount")}{text("Note", "rating")}<button disabled={fetchingReviews} onClick={async () => { try { setFetchingReviews(true); const res = await sitesApi.fetchGoogleReviews(site._id); const existing = (d.testimonials || []).filter(t => !t.isGoogle); onChange(idx, 'testimonials', [...existing, ...res.reviews]); onChange(idx, 'reviewCount', res.totalReviews); onChange(idx, 'rating', res.rating); onChange(idx, 'ctaText', `Voir nos ${res.totalReviews}+ avis`); if (res.googleMapsUri) onChange(idx, 'ctaUrl', res.googleMapsUri); toast.success(`${res.reviews.length} avis Google importés`); } catch (err) { toast.error(err.response?.data?.error || err.message); } finally { setFetchingReviews(false); } }} className="w-full mb-2.5 px-3 py-1.5 text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 disabled:opacity-50 flex items-center justify-center gap-1.5">{fetchingReviews ? <><Loader2 size={11} className="animate-spin" /> Import en cours...</> : <><RefreshCw size={11} /> Importer les avis Google</>}</button>{list("Témoignages", "testimonials", [{key:'text',label:'Témoignage',multiline:true},{key:'name',label:'Nom'},{key:'location',label:'Ville'},{key:'isGoogle',label:'Avis Google',type:'badge'}], "Témoignage")}{text("Texte du bouton", "ctaText")}{text("Lien des avis", "ctaUrl")}</>;
     case 'cta-banner': return <>{colorBar}{text("Texte", "text")}{text("Texte du bouton", "ctaText")}{text("Lien", "ctaUrl")}{select("Style", "bannerStyle", [{value:'dark',label:'Sombre'},{value:'light',label:'Clair'},{value:'accent',label:'Accent'}])}</>;
     case 'services-grid': return <>{colorBar}{text("Titre", "title")}{text("Sous-titre", "subtitle")}{list("Services", "services", [{key:'imageMediaId',label:'Image',type:'image'},{key:'name',label:'Nom'},{key:'shortDescription',label:'Description courte'},{key:'linkUrl',label:'Lien (URL page)'}], "Service")}</>;
     case 'services-detail': return <>{colorBar}{text("Titre", "title")}{list("Services", "services", [{key:'imageMediaId',label:'Image',type:'image'},{key:'name',label:'Nom'},{key:'description',label:'Description',multiline:true},{key:'price',label:'Prix'}], "Service")}</>;

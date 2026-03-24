@@ -4,7 +4,7 @@ import { Sparkles, ArrowRight, ArrowLeft, Trash2, Upload, X } from 'lucide-react
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 import useSiteStore from '../stores/siteStore';
-import { pagesApi, aiApi, buildApi, mediaApi } from '../services/api';
+import { pagesApi, aiApi, buildApi, mediaApi, sitesApi } from '../services/api';
 import { trackSiteCreated, trackMediaUploaded, trackAIGeneration } from '../lib/posthog';
 
 const STEPS = ['1. Entreprise & contact', '2. Design & couleurs', '3. Pages & mots-clés'];
@@ -35,7 +35,7 @@ export default function SiteCreatePage() {
 
   const [form, setForm] = useState({
     name: '', domain: '',
-    business: { name: '', activity: '', description: '', address: '', city: '', zip: '', country: 'CH', phone: '', email: '', siret: '', services: '', targetAudience: '', uniqueSellingPoints: '', tone: 'professionnel', googleReviewCount: '', googleReviewRating: '', googleReviewUrl: '' },
+    business: { name: '', activity: '', description: '', address: '', city: '', zip: '', country: 'CH', phone: '', email: '', siret: '', services: '', targetAudience: '', uniqueSellingPoints: '', tone: 'professionnel', googleMapsUrl: '', googleReviewCount: '', googleReviewRating: '', googleReviewUrl: '' },
     design: { primaryColor: '#12203e', accentColor: '#c8a97e', backgroundColor: '#ffffff', textColor: '#333333', fontHeading: 'Playfair Display', fontBody: 'Inter', borderRadius: 'rounded' },
     posthog: { enabled: false, apiKey: '' },
     pages: [{ title: '', keyword: '', serviceFocus: '', isMain: true }],
@@ -147,6 +147,17 @@ export default function SiteCreatePage() {
         });
       }
 
+      // Fetch real Google reviews (once for all pages)
+      let googleReviewsData = null;
+      if (form.business?.googleMapsUrl) {
+        try {
+          setAiProgress('Récupération des avis Google...');
+          googleReviewsData = await sitesApi.fetchGoogleReviews(site._id);
+        } catch (err) {
+          console.warn('[GoogleReviews] Fetch failed, using AI reviews only:', err.message);
+        }
+      }
+
       // Step 2: AI generation with correct links
       for (const created of createdPages) {
         const pageConf = created.conf;
@@ -180,9 +191,19 @@ export default function SiteCreatePage() {
                 case 'google-reviews':
                   if (content.googleReviews) {
                     sData.data = { ...s.data, ...content.googleReviews };
-                    if (site.business?.googleReviewCount) sData.data.reviewCount = parseInt(site.business.googleReviewCount);
-                    if (site.business?.googleReviewRating) sData.data.rating = parseFloat(site.business.googleReviewRating);
-                    if (site.business?.googleReviewUrl) sData.data.ctaUrl = site.business.googleReviewUrl;
+                    // Merge real Google reviews with AI-generated ones
+                    if (googleReviewsData?.reviews?.length) {
+                      const aiReviews = (sData.data.testimonials || []).map(t => ({ ...t, isGoogle: false }));
+                      sData.data.testimonials = [...aiReviews, ...googleReviewsData.reviews];
+                      sData.data.reviewCount = googleReviewsData.totalReviews;
+                      sData.data.rating = googleReviewsData.rating;
+                      sData.data.ctaText = `Voir nos ${googleReviewsData.totalReviews}+ avis`;
+                      sData.data.ctaUrl = googleReviewsData.googleMapsUri || site.business?.googleReviewUrl || '';
+                    } else {
+                      if (site.business?.googleReviewCount) sData.data.reviewCount = parseInt(site.business.googleReviewCount);
+                      if (site.business?.googleReviewRating) sData.data.rating = parseFloat(site.business.googleReviewRating);
+                      if (site.business?.googleReviewUrl) sData.data.ctaUrl = site.business.googleReviewUrl;
+                    }
                   }
                   break;
                 case 'cta-banner':
@@ -444,17 +465,22 @@ export default function SiteCreatePage() {
             <div className="col-span-2 border-t pt-4 mt-2">
               <h3 className="text-sm font-semibold text-gray-600 mb-3">Avis Google (optionnel)</h3>
             </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lien Google Maps</label>
+              <input value={form.business.googleMapsUrl} onChange={e => updateField('business.googleMapsUrl', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="https://maps.google.com/... ou https://g.page/..." />
+              <p className="text-xs text-gray-400 mt-1">Collez le lien Google Maps de l'entreprise pour importer automatiquement les vrais avis Google</p>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre d'avis Google</label>
-              <input type="number" min="0" value={form.business.googleReviewCount} onChange={e => updateField('business.googleReviewCount', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="Ex: 127" />
+              <input type="number" min="0" value={form.business.googleReviewCount} onChange={e => updateField('business.googleReviewCount', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="Auto si lien Google Maps renseigné" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Note Google (ex: 4.8)</label>
-              <input type="number" step="0.1" min="0" max="5" value={form.business.googleReviewRating} onChange={e => updateField('business.googleReviewRating', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="Ex: 4.8" />
+              <input type="number" step="0.1" min="0" max="5" value={form.business.googleReviewRating} onChange={e => updateField('business.googleReviewRating', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="Auto si lien Google Maps renseigné" />
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Lien vers vos avis Google</label>
-              <input value={form.business.googleReviewUrl} onChange={e => updateField('business.googleReviewUrl', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="https://g.page/r/..." />
+              <input value={form.business.googleReviewUrl} onChange={e => updateField('business.googleReviewUrl', e.target.value)} className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="Auto si lien Google Maps renseigné" />
             </div>
 
             <div className="col-span-2 border-t pt-4 mt-2">

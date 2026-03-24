@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Upload, CheckCircle, Loader2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useSiteStore from '../stores/siteStore';
-import { mediaApi } from '../services/api';
+import { mediaApi, sitesApi } from '../services/api';
 import PublishButton from '../components/PublishButton';
 
 // API base for static uploads — strip '/api' suffix if present
@@ -208,31 +208,6 @@ export default function SiteSettingsPage() {
           </div>
         </section>
 
-        {/* Header */}
-        <section className="bg-white rounded-xl p-6">
-          <h2 className="font-semibold text-lg mb-4">Header</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Texte du bouton CTA" value={form.header?.ctaText || ''} onChange={v => u('header.ctaText', v)} placeholder="Nous contacter" />
-            <Field label="Lien du bouton CTA" value={form.header?.ctaUrl || ''} onChange={v => u('header.ctaUrl', v)} placeholder="contact.html" />
-            {[
-              ['bgColor', 'Fond du header', form.design?.primaryColor || '#12203e'],
-              ...(!form.design?.logoMediaId ? [['logoColor', 'Couleur du logo (texte)', form.design?.primaryColor || '#12203e']] : []),
-              ['ctaBgColor', 'Fond du bouton CTA', form.design?.accentColor || '#c8a97e'],
-              ['ctaTextColor', 'Texte du bouton CTA', '#ffffff'],
-            ].map(([key, label, fallback]) => (
-              <div key={key}>
-                <label className="text-sm font-medium text-gray-700 block mb-1">{label}</label>
-                <div className="flex gap-2 items-center">
-                  <label className="relative w-10 h-10 rounded-lg border border-gray-300 cursor-pointer overflow-hidden shrink-0" style={{ backgroundColor: form.header?.[key] || fallback }}>
-                    <input type="color" value={form.header?.[key] || fallback} onChange={e => u(`header.${key}`, e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
-                  </label>
-                  <input value={form.header?.[key] || ''} onChange={e => u(`header.${key}`, e.target.value)} placeholder={`Défaut: ${fallback}`} className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* Business */}
         <section className="bg-white rounded-xl p-6">
           <h2 className="font-semibold text-lg mb-4">Informations de l'entreprise</h2>
@@ -247,10 +222,16 @@ export default function SiteSettingsPage() {
               <Field label="Adresse" value={form.business?.address || ''} onChange={v => u('business.address', v)} />
             </div>
             <Field label="N° entreprise (IDE/SIRET)" value={form.business?.siret || ''} onChange={v => u('business.siret', v)} />
+            <div className="col-span-2">
+              <Field label="Lien Google Maps" value={form.business?.googleMapsUrl || ''} onChange={v => u('business.googleMapsUrl', v)} placeholder="https://maps.google.com/... ou https://g.page/..." />
+              <button type="button" className="mt-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50" disabled={!form.business?.googleMapsUrl || saving} onClick={async () => { try { setSaving(true); await updateSite(siteId, { business: { googleMapsUrl: form.business.googleMapsUrl } }); const res = await sitesApi.fetchGoogleReviews(siteId); u('business.googleReviewCount', res.totalReviews); u('business.googleReviewRating', res.rating); u('business.googleReviewUrl', res.googleMapsUri); toast.success(`${res.reviews.length} avis Google importés (${res.totalReviews} au total, note ${res.rating}/5)`); } catch (err) { toast.error('Erreur: ' + (err.response?.data?.error || err.message)); } finally { setSaving(false); } }}>
+                Importer les avis Google
+              </button>
+            </div>
             <Field label="Avis Google (nombre)" value={form.business?.googleReviewCount || ''} onChange={v => u('business.googleReviewCount', Number(v))} />
             <Field label="Note Google (ex: 4.8)" value={form.business?.googleReviewRating || ''} onChange={v => u('business.googleReviewRating', v)} />
             <div className="col-span-2">
-              <Field label="Lien avis Google" value={form.business?.googleReviewUrl || ''} onChange={v => u('business.googleReviewUrl', v)} placeholder="https://g.page/r/..." />
+              <Field label="Lien avis Google" value={form.business?.googleReviewUrl || ''} onChange={v => u('business.googleReviewUrl', v)} placeholder="Auto si lien Google Maps renseigné" />
             </div>
           </div>
         </section>

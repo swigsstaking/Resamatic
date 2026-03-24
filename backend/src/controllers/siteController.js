@@ -2,6 +2,7 @@ import Site from '../models/Site.js';
 import Page from '../models/Page.js';
 import Media from '../models/Media.js';
 import slugify from 'slugify';
+import { getGoogleReviews } from '../services/google-reviews.service.js';
 
 export const list = async (req, res, next) => {
   try {
@@ -65,6 +66,33 @@ export const remove = async (req, res, next) => {
     await Media.deleteMany({ siteId: site._id });
     res.json({ message: 'Site deleted' });
   } catch (err) { next(err); }
+};
+
+export const fetchGoogleReviews = async (req, res, next) => {
+  try {
+    const site = await Site.findById(req.params.id);
+    if (!site) return res.status(404).json({ error: 'Site not found' });
+
+    const result = await getGoogleReviews(site);
+
+    // Cache placeId and update business metadata
+    site.business.googlePlaceId = result.placeId;
+    if (result.rating) site.business.googleReviewRating = result.rating;
+    if (result.totalReviews) site.business.googleReviewCount = result.totalReviews;
+    if (result.googleMapsUri) site.business.googleReviewUrl = result.googleMapsUri;
+    site.markModified('business');
+    await site.save();
+
+    res.json({
+      reviews: result.reviews,
+      rating: result.rating,
+      totalReviews: result.totalReviews,
+      googleMapsUri: result.googleMapsUri,
+    });
+  } catch (err) {
+    console.error('[GoogleReviews] Fetch failed:', err.message);
+    res.status(400).json({ error: err.message });
+  }
 };
 
 export const duplicate = async (req, res, next) => {
