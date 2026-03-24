@@ -190,14 +190,22 @@ export default function SiteCreatePage() {
                   break;
                 case 'services-grid':
                   if (content.servicesGrid) sData.data = { ...s.data, ...content.servicesGrid };
-                  // Override services with actual pages (correct links)
+                  // Override services with actual pages (correct links), max 4 with rotation
                   {
-                    const otherPages = createdPages.filter((_, j) => j !== createdPages.indexOf(created));
-                    sData.data.services = otherPages.map((op) => ({
+                    const currentIdx = createdPages.indexOf(created);
+                    const otherPages = createdPages.filter((_, j) => j !== currentIdx);
+                    const allServices = otherPages.map((op) => ({
                       name: op.conf.serviceFocus || op.conf.keyword || op.conf.title,
                       shortDescription: '',
                       linkUrl: op.href,
                     }));
+                    if (allServices.length <= 4) {
+                      sData.data.services = allServices;
+                    } else {
+                      // Rotate: offset by currentIdx so each page shows different 4
+                      const rotated = [...allServices.slice(currentIdx % allServices.length), ...allServices.slice(0, currentIdx % allServices.length)];
+                      sData.data.services = rotated.slice(0, 4);
+                    }
                   }
                   break;
                 case 'guarantee':
@@ -221,17 +229,27 @@ export default function SiteCreatePage() {
               return sData;
             });
 
-            // Assign uploaded images to sections
+            // Assign uploaded images to ALL image fields (cyclic distribution)
             if (uploadedMediaIds.length > 0) {
               const pageIdx = createdPages.indexOf(created);
-              const heroImgId = uploadedMediaIds[pageIdx * 2]; // 0, 2, 4...
-              const descImgId = uploadedMediaIds[pageIdx * 2 + 1]; // 1, 3, 5...
+              const n = uploadedMediaIds.length;
+              let imgCursor = (pageIdx * 2) % n;
+              const nextImg = () => { const id = uploadedMediaIds[imgCursor % n]; imgCursor++; return id; };
               for (const s of sections) {
-                if (s.type === 'hero' && heroImgId && !s.data.backgroundMediaId) {
-                  s.data.backgroundMediaId = heroImgId;
+                if (s.type === 'hero' && !s.data.backgroundMediaId) {
+                  s.data.backgroundMediaId = nextImg();
                 }
-                if (s.type === 'description' && descImgId && !s.data.imageMediaId) {
-                  s.data.imageMediaId = descImgId;
+                if (s.type === 'description' && !s.data.imageMediaId) {
+                  s.data.imageMediaId = nextImg();
+                }
+                if (s.type === 'why-us' && !s.data.imageMediaId) {
+                  s.data.imageMediaId = nextImg();
+                }
+                if (s.type === 'services-grid' && s.data.services) {
+                  s.data.services = s.data.services.map(svc => ({
+                    ...svc,
+                    imageMediaId: svc.imageMediaId || nextImg(),
+                  }));
                 }
               }
             }
@@ -246,19 +264,22 @@ export default function SiteCreatePage() {
             toast.error(`IA: erreur pour "${pageConf.keyword}"`);
           }
         } else if (uploadedMediaIds.length > 0) {
-          // No AI but images uploaded — assign images to sections directly
+          // No AI but images uploaded — assign images to sections directly (cyclic)
           const pageIdx = createdPages.indexOf(created);
-          const heroImgId = uploadedMediaIds[pageIdx * 2];
-          const descImgId = uploadedMediaIds[pageIdx * 2 + 1];
-          if (heroImgId || descImgId) {
-            const sections = created.page.sections.map(s => {
-              const sData = { ...s };
-              if (s.type === 'hero' && heroImgId) sData.data = { ...s.data, backgroundMediaId: heroImgId };
-              if (s.type === 'description' && descImgId) sData.data = { ...s.data, imageMediaId: descImgId };
-              return sData;
-            });
-            await pagesApi.updateSections(created.page._id, sections);
-          }
+          const n = uploadedMediaIds.length;
+          let imgCursor = (pageIdx * 2) % n;
+          const nextImg = () => { const id = uploadedMediaIds[imgCursor % n]; imgCursor++; return id; };
+          const sections = created.page.sections.map(s => {
+            const sData = { ...s };
+            if (s.type === 'hero') sData.data = { ...s.data, backgroundMediaId: nextImg() };
+            if (s.type === 'description') sData.data = { ...s.data, imageMediaId: nextImg() };
+            if (s.type === 'why-us') sData.data = { ...s.data, imageMediaId: nextImg() };
+            if (s.type === 'services-grid' && s.data.services) {
+              sData.data = { ...s.data, services: s.data.services.map(svc => ({ ...svc, imageMediaId: nextImg() })) };
+            }
+            return sData;
+          });
+          await pagesApi.updateSections(created.page._id, sections);
         }
       }
 

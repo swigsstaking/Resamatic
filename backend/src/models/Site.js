@@ -58,7 +58,16 @@ const siteSchema = new mongoose.Schema({
     defaultKeywords: [String],
   },
 
-  // Header CTA
+  // Header config
+  header: {
+    ctaText: { type: String, trim: true, default: 'Nous contacter' },
+    ctaUrl: { type: String, trim: true, default: 'contact.html' },
+    ctaBgColor: String,
+    ctaTextColor: String,
+    bgColor: String,
+    logoColor: String,
+  },
+  // Legacy (kept for backwards compat)
   headerCtaText: { type: String, trim: true },
   headerCtaUrl: { type: String, trim: true },
 

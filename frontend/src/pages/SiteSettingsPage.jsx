@@ -208,6 +208,31 @@ export default function SiteSettingsPage() {
           </div>
         </section>
 
+        {/* Header */}
+        <section className="bg-white rounded-xl p-6">
+          <h2 className="font-semibold text-lg mb-4">Header</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Texte du bouton CTA" value={form.header?.ctaText || ''} onChange={v => u('header.ctaText', v)} placeholder="Nous contacter" />
+            <Field label="Lien du bouton CTA" value={form.header?.ctaUrl || ''} onChange={v => u('header.ctaUrl', v)} placeholder="contact.html" />
+            {[
+              ['bgColor', 'Fond du header', form.design?.primaryColor || '#12203e'],
+              ...(!form.design?.logoMediaId ? [['logoColor', 'Couleur du logo (texte)', form.design?.primaryColor || '#12203e']] : []),
+              ['ctaBgColor', 'Fond du bouton CTA', form.design?.accentColor || '#c8a97e'],
+              ['ctaTextColor', 'Texte du bouton CTA', '#ffffff'],
+            ].map(([key, label, fallback]) => (
+              <div key={key}>
+                <label className="text-sm font-medium text-gray-700 block mb-1">{label}</label>
+                <div className="flex gap-2 items-center">
+                  <label className="relative w-10 h-10 rounded-lg border border-gray-300 cursor-pointer overflow-hidden shrink-0" style={{ backgroundColor: form.header?.[key] || fallback }}>
+                    <input type="color" value={form.header?.[key] || fallback} onChange={e => u(`header.${key}`, e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                  </label>
+                  <input value={form.header?.[key] || ''} onChange={e => u(`header.${key}`, e.target.value)} placeholder={`Défaut: ${fallback}`} className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Business */}
         <section className="bg-white rounded-xl p-6">
           <h2 className="font-semibold text-lg mb-4">Informations de l'entreprise</h2>

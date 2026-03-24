@@ -5,7 +5,7 @@
     <div class="services-grid">
       {{#each services}}
         <div class="service-card">
-          <div class="service-card-img">
+          <div class="service-card-img" data-editable="services.{{@index}}.imageMediaId">
             {{#if this.imageUrl}}
               <img
                 src="{{this.imageUrl}}"
@@ -15,7 +15,7 @@
                 loading="lazy"
               >
             {{else}}
-              <div class="img-placeholder" data-editable="services.{{@index}}.imageMediaId">
+              <div class="img-placeholder">
                 <span style="color:#9ca3af;font-size:0.875rem;">Cliquez pour ajouter une image</span>
               </div>
             {{/if}}

@@ -813,6 +813,11 @@
 .footer-nav a:hover { color: var(--color-accent); }
 .footer-nav-title { font-weight: 600; margin-bottom: 0.8rem; font-size: 0.95rem; color: #fff; }
 
+/* ===== INLINE EDITING ===== */
+[data-editable]:focus { outline: none !important; }
+[contenteditable="true"] { outline: 2px solid rgba(200,169,126,1) !important; outline-offset: 3px !important; }
+[contenteditable="true"]:focus { outline: 2px solid rgba(200,169,126,1) !important; outline-offset: 3px !important; }
+
 /* ===== RESPONSIVE ===== */
 html, body { overflow-x: hidden; }
 

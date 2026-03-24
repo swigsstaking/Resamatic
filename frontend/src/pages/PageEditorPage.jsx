@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { pagesApi, buildApi, aiApi } from '../services/api';
 import useSiteStore from '../stores/siteStore';
 import MediaPicker from '../components/MediaPicker';
+import RichTextEditor from '../components/RichTextEditor';
 
 const SECTION_META = {
   'hero':             { label: 'Hero',               icon: LayoutTemplate },
@@ -43,7 +44,7 @@ const VIEWPORT_WIDTHS = { desktop: '100%', tablet: '768px', mobile: '375px' };
 export default function PageEditorPage() {
   const { siteId, pageId } = useParams();
   const navigate = useNavigate();
-  const { currentSite, fetchSite } = useSiteStore();
+  const { currentSite, fetchSite, updateSite } = useSiteStore();
   const [page, setPage] = useState(null);
   const [allPages, setAllPages] = useState([]);
   const [selectedSection, setSelectedSection] = useState(null);
@@ -55,6 +56,7 @@ export default function PageEditorPage() {
   const [dirty, setDirty] = useState(false);
   const [iframeReady, setIframeReady] = useState(false);
   const [viewport, setViewport] = useState('desktop');
+  const [editingHeader, setEditingHeader] = useState(false);
   const iframeRef = useRef(null);
   const pageRef = useRef(null);
   const allPagesRef = useRef([]);
@@ -176,6 +178,7 @@ export default function PageEditorPage() {
   // --- Select section ---
   const selectSection = (idx) => {
     setSelectedSection(idx);
+    setEditingHeader(false);
     const section = pageRef.current?.sections?.[idx];
     if (section) {
       postToIframe({ type: 'resamatic:selectSection', sectionType: section.type });
@@ -297,16 +300,28 @@ export default function PageEditorPage() {
         const sIdx = currentPage.sections.findIndex(s => s.type === e.data.sectionType);
         if (sIdx < 0) return;
         setSelectedSection(sIdx);
+        setEditingHeader(false);
         setPanelOpen(true);
         if (e.data.isMedia) {
           openMediaPickerRef.current((mediaId) => {
             updateSectionDataRef.current(sIdx, e.data.field, mediaId);
           });
         }
-        setTimeout(() => {
-          const fieldEl = document.querySelector(`[data-editor-field="${e.data.field}"]`);
-          if (fieldEl) fieldEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        if (e.data.field) {
+          setTimeout(() => {
+            const fieldEl = document.querySelector(`[data-editor-field="${e.data.field}"]`);
+            if (fieldEl) fieldEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
+        }
+      }
+      // Inline text editing from preview
+      if (e.data?.type === 'resamatic:inlineEdit') {
+        const currentPage = pageRef.current;
+        if (!currentPage?.sections) return;
+        const sIdx = currentPage.sections.findIndex(s => s.type === e.data.sectionType);
+        if (sIdx >= 0) {
+          updateSectionDataRef.current(sIdx, e.data.field, e.data.value);
+        }
       }
     };
     window.addEventListener('message', handler);
@@ -395,8 +410,18 @@ export default function PageEditorPage() {
               </div>
             )}
 
-            {/* Liste des sections */}
+            {/* Header + Liste des sections */}
             <div className="border-b border-gray-200 overflow-y-auto shrink-0" style={{ maxHeight: '30vh' }}>
+              {/* Header item */}
+              <div
+                onClick={() => { setEditingHeader(true); setSelectedSection(null); }}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer border-l-[3px] transition-all ${
+                  editingHeader ? 'border-l-accent bg-accent/5 font-medium' : 'border-l-transparent hover:bg-gray-50'
+                }`}
+              >
+                <LayoutTemplate size={13} className="shrink-0 text-gray-400" />
+                <span className="flex-1 truncate">Header</span>
+              </div>
               {page.sections.map((s, idx) => {
                 const meta = getSectionMeta(s.type);
                 const Icon = meta.icon;
@@ -441,7 +466,11 @@ export default function PageEditorPage() {
 
             {/* Éditeur de la section sélectionnée */}
             <div className="flex-1 overflow-y-auto">
-              {section ? (
+              {editingHeader && currentSite ? (
+                <div className="p-3">
+                  <HeaderEditor site={currentSite} onSave={async (data) => { await updateSite(siteId, data); setDirty(true); needsFullReload.current = true; }} postToIframe={postToIframe} />
+                </div>
+              ) : section ? (
                 <div className="p-3">
                   <SectionEditor
                     section={section}
@@ -663,6 +692,21 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
     </div>
   );
 
+  const richText = (label, field) => (
+    <div key={field} className="mb-2.5" data-editor-field={field}>
+      <div className="flex items-center justify-between mb-0.5">
+        <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{label}</span>
+        <button
+          onClick={() => onAIRewrite(field, d[field] || '')}
+          className="text-[9px] text-accent/60 hover:text-accent flex items-center gap-0.5"
+        >
+          <Sparkles size={8} /> IA
+        </button>
+      </div>
+      <RichTextEditor value={d[field] || ''} onChange={val => onChange(idx, field, val)} />
+    </div>
+  );
+
   const image = (label, field) => (
     <div key={field} className="mb-2.5" data-editor-field={field}>
       <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider block mb-0.5">{label}</label>
@@ -763,18 +807,84 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
 
   switch (section.type) {
     case 'hero': return <>{colorBar}{text("Titre H1", "headline")}{text("Sous-titre", "subheadline")}{list("Points clés", "bulletPoints", [{key:'value',label:'Point'}], "Point")}{text("Texte du bouton", "ctaText")}{text("Lien du bouton", "ctaUrl")}{image("Image", "backgroundMediaId")}</>;
-    case 'text-highlight': return <>{colorBar}{text("Texte", "text", { multiline: true })}</>;
-    case 'description': return <>{colorBar}{text("Titre", "title")}{text("Contenu", "body", { multiline: true })}{list("Points clés", "bulletPoints", [{key:'value',label:'Point'}], "Point")}{text("Texte du bouton", "ctaText")}{text("Lien du bouton", "ctaUrl")}{image("Image", "imageMediaId")}{select("Position image", "imagePosition", [{value:'right',label:'Droite'},{value:'left',label:'Gauche'}])}</>;
-    case 'why-us': return <>{colorBar}{text("Titre", "title")}{text("Sous-titre", "subtitle")}{text("Contenu", "body", { multiline: true })}{image("Image", "imageMediaId")}{list("Points clés", "reasons", [{key:'title',label:'Titre'},{key:'text',label:'Description'}], "Point")}{text("Texte du bouton", "ctaText")}{text("Lien du bouton", "ctaUrl")}</>;
+    case 'text-highlight': return <>{colorBar}{richText("Texte", "text")}</>;
+    case 'description': return <>{colorBar}{text("Titre", "title")}{richText("Contenu", "body")}{list("Points clés", "bulletPoints", [{key:'value',label:'Point'}], "Point")}{text("Texte du bouton", "ctaText")}{text("Lien du bouton", "ctaUrl")}{image("Image", "imageMediaId")}{select("Position image", "imagePosition", [{value:'right',label:'Droite'},{value:'left',label:'Gauche'}])}</>;
+    case 'why-us': return <>{colorBar}{text("Titre", "title")}{text("Sous-titre", "subtitle")}{richText("Contenu", "body")}{image("Image", "imageMediaId")}{list("Points clés", "reasons", [{key:'title',label:'Titre'},{key:'text',label:'Description'}], "Point")}{text("Texte du bouton", "ctaText")}{text("Lien du bouton", "ctaUrl")}</>;
     case 'google-reviews': return <>{colorBar}{text("Titre", "title")}{text("Nombre d'avis", "reviewCount")}{text("Note", "rating")}{list("Témoignages", "testimonials", [{key:'text',label:'Témoignage',multiline:true},{key:'name',label:'Nom'},{key:'location',label:'Ville'}], "Témoignage")}{text("Texte du bouton", "ctaText")}{text("Lien des avis", "ctaUrl")}</>;
     case 'cta-banner': return <>{colorBar}{text("Texte", "text")}{text("Texte du bouton", "ctaText")}{text("Lien", "ctaUrl")}{select("Style", "bannerStyle", [{value:'dark',label:'Sombre'},{value:'light',label:'Clair'},{value:'accent',label:'Accent'}])}</>;
     case 'services-grid': return <>{colorBar}{text("Titre", "title")}{text("Sous-titre", "subtitle")}{list("Services", "services", [{key:'imageMediaId',label:'Image',type:'image'},{key:'name',label:'Nom'},{key:'shortDescription',label:'Description courte'},{key:'linkUrl',label:'Lien (URL page)'}], "Service")}</>;
     case 'services-detail': return <>{colorBar}{text("Titre", "title")}{list("Services", "services", [{key:'imageMediaId',label:'Image',type:'image'},{key:'name',label:'Nom'},{key:'description',label:'Description',multiline:true},{key:'price',label:'Prix'}], "Service")}</>;
-    case 'guarantee': return <>{colorBar}{text("Titre", "title")}{text("Texte", "text", { multiline: true })}</>;
+    case 'guarantee': return <>{colorBar}{text("Titre", "title")}{richText("Texte", "text")}</>;
     case 'testimonials': return <>{colorBar}{text("Titre", "title")}{list("Témoignages", "items", [{key:'name',label:'Nom'},{key:'location',label:'Ville'},{key:'rating',label:'Note'},{key:'text',label:'Témoignage',multiline:true}], "Témoignage")}</>;
     case 'faq': return <>{colorBar}{text("Titre", "title")}{list("Questions", "items", [{key:'question',label:'Question'},{key:'answer',label:'Réponse',multiline:true}], "Question")}</>;
-    case 'team': return <>{colorBar}{text("Titre", "title")}{text("Contenu", "body", { multiline: true })}{list("Membres", "members", [{key:'name',label:'Nom'},{key:'role',label:'Rôle'},{key:'bio',label:'Bio',multiline:true}], "Membre")}</>;
+    case 'team': return <>{colorBar}{text("Titre", "title")}{richText("Contenu", "body")}{list("Membres", "members", [{key:'name',label:'Nom'},{key:'role',label:'Rôle'},{key:'bio',label:'Bio',multiline:true}], "Membre")}</>;
     case 'map': return <>{colorBar}{text("Titre", "title")}{text("Adresse", "address")}{text("Horaires", "hours")}{text("Téléphone", "phone")}{text("Email", "email")}{text("URL Google Maps", "embedUrl", { multiline: true })}</>;
     default: return <p className="text-xs text-gray-400 text-center py-4">Section non éditable</p>;
   }
+}
+
+function HeaderEditor({ site, onSave, postToIframe }) {
+  const [form, setForm] = useState({
+    ctaText: site.header?.ctaText || 'Nous contacter',
+    ctaUrl: site.header?.ctaUrl || 'contact.html',
+    bgColor: site.header?.bgColor || '',
+    logoColor: site.header?.logoColor || '',
+    ctaBgColor: site.header?.ctaBgColor || '',
+    ctaTextColor: site.header?.ctaTextColor || '',
+  });
+  const [colorsOpen, setColorsOpen] = useState(false);
+  const timer = useRef(null);
+
+  const update = (key, value) => {
+    const next = { ...form, [key]: value };
+    setForm(next);
+    // Live preview update
+    postToIframe({ type: 'resamatic:updateHeader', ...next });
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => onSave({ header: next }), 1000);
+  };
+
+  const design = site?.design || {};
+  const swatches = [
+    { value: '', transparent: true },
+    { value: '#ffffff', border: true },
+    { value: '#1f2937' },
+    { value: design.primaryColor || '#12203e' },
+    { value: design.accentColor || '#c8a97e' },
+  ];
+
+  return (
+    <>
+      <div className="mb-2.5">
+        <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider block mb-0.5">Texte du bouton</label>
+        <textarea value={form.ctaText} onChange={e => update('ctaText', e.target.value)} placeholder="Nous contacter" rows={1} className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs resize-none focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none overflow-hidden" />
+      </div>
+      <div className="mb-2.5">
+        <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider block mb-0.5">Lien du bouton</label>
+        <textarea value={form.ctaUrl} onChange={e => update('ctaUrl', e.target.value)} placeholder="contact.html" rows={1} className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs resize-none focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none overflow-hidden" />
+      </div>
+      <div className="mb-3 border border-gray-100 rounded-lg">
+        <button
+          onClick={() => setColorsOpen(!colorsOpen)}
+          className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-gray-500 hover:bg-gray-50 rounded-lg"
+        >
+          <Palette size={11} />
+          Couleurs
+          <span className="ml-auto flex items-center gap-1">
+            {form.bgColor && <span className="w-3.5 h-3.5 rounded-full border border-gray-200" style={{ background: form.bgColor }} />}
+            {form.ctaBgColor && <span className="w-3.5 h-3.5 rounded-full border border-gray-200" style={{ background: form.ctaBgColor }} />}
+            <ChevDown size={9} className={`text-gray-300 transition-transform ${colorsOpen ? 'rotate-180' : ''}`} />
+          </span>
+        </button>
+        {colorsOpen && (
+          <div className="px-2.5 pb-2.5 pt-1 space-y-2 border-t border-gray-100">
+            <SwatchRow label="Fond header" swatches={swatches} current={form.bgColor} onPick={v => update('bgColor', v)} />
+            {!site.design?.logoMediaId && <SwatchRow label="Logo (texte)" swatches={swatches} current={form.logoColor} onPick={v => update('logoColor', v)} />}
+            <SwatchRow label="Fond bouton" swatches={swatches} current={form.ctaBgColor} onPick={v => update('ctaBgColor', v)} />
+            <SwatchRow label="Texte bouton" swatches={swatches} current={form.ctaTextColor} onPick={v => update('ctaTextColor', v)} />
+          </div>
+        )}
+      </div>
+    </>
+  );
 }

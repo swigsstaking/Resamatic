@@ -85,17 +85,37 @@
         }
       });
 
+      // === Click anywhere in section → select that section ===
+      document.querySelectorAll('[data-section]').forEach(function(sec) {
+        sec.style.cursor = 'pointer';
+        sec.addEventListener('click', function(e) {
+          // Don't override data-editable clicks or inline editing
+          if (e.target.closest('[data-editable]') || e.target.isContentEditable) return;
+          e.preventDefault();
+          window.parent.postMessage({
+            type: 'resamatic:edit',
+            field: '',
+            sectionType: sec.dataset.section,
+            isMedia: false,
+          }, '*');
+        });
+      });
+
       // === Click-to-edit: hover highlights + click sends message to parent ===
       document.querySelectorAll('[data-editable]').forEach(function(el) {
         el.style.cursor = 'pointer';
         el.style.position = el.style.position || 'relative';
+        var isMedia = el.dataset.editable.indexOf('MediaId') !== -1;
         el.addEventListener('mouseenter', function() {
           el.style.outline = '2px dashed rgba(200,169,126,0.7)';
           el.style.outlineOffset = '3px';
         });
         el.addEventListener('mouseleave', function() {
-          el.style.outline = '';
-          el.style.outlineOffset = '';
+          if (!el.isContentEditable) {
+            el.style.outline = '';
+            el.style.outlineOffset = '';
+            el.blur();
+          }
         });
         el.addEventListener('click', function(e) {
           e.preventDefault();
@@ -105,9 +125,51 @@
             type: 'resamatic:edit',
             field: el.dataset.editable,
             sectionType: section ? section.dataset.section : '',
-            isMedia: el.dataset.editable.indexOf('MediaId') !== -1,
+            isMedia: isMedia,
           }, '*');
         });
+
+        // === Double-click inline editing for all text fields ===
+        var field = el.dataset.editable;
+        var isHtmlField = field === 'body' || field === 'text';
+        if (!isMedia) {
+          el.addEventListener('dblclick', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (el.isContentEditable) return;
+            el.contentEditable = 'true';
+            el.style.outline = '2px solid rgba(200,169,126,1)';
+            el.style.outlineOffset = '3px';
+            el.style.background = 'rgba(255,255,255,0.9)';
+            // Suppress browser default focus ring
+            el.style.setProperty('-webkit-focus-ring-color', 'transparent');
+            var origOutline = el.style.cssText;
+            el.focus();
+
+            function finish() {
+              el.contentEditable = 'false';
+              el.style.outline = '';
+              el.style.outlineOffset = '';
+              el.style.background = '';
+              el.removeEventListener('blur', finish);
+              el.removeEventListener('keydown', onKey);
+              var section = el.closest('[data-section]');
+              window.parent.postMessage({
+                type: 'resamatic:inlineEdit',
+                field: el.dataset.editable,
+                sectionType: section ? section.dataset.section : '',
+                value: isHtmlField ? el.innerHTML : el.textContent,
+              }, '*');
+            }
+            function onKey(ev) {
+              if (ev.key === 'Escape') { el.blur(); }
+              // For HTML fields, allow Enter for new lines; for plain text, Enter = done
+              if (ev.key === 'Enter' && !ev.shiftKey && !isHtmlField) { ev.preventDefault(); el.blur(); }
+            }
+            el.addEventListener('blur', finish);
+            el.addEventListener('keydown', onKey);
+          });
+        }
       });
 
       // === Real-time updates from parent editor ===
@@ -121,7 +183,8 @@
           if (!section) return;
           var el = section.querySelector('[data-editable="' + d.field + '"]');
           if (el) {
-            if (d.field === 'body') { el.innerHTML = d.value; }
+            var htmlFields = ['body', 'text'];
+            if (htmlFields.indexOf(d.field) !== -1) { el.innerHTML = d.value; }
             else { el.textContent = d.value; }
           }
         }
@@ -145,6 +208,28 @@
               colorEls.forEach(function(el) { el.style.color = d.textColor; });
             } else {
               colorEls.forEach(function(el) { el.style.color = ''; });
+            }
+          }
+        }
+
+        // Update header live
+        if (d.type === 'resamatic:updateHeader') {
+          var header = document.querySelector('.site-header');
+          if (header) {
+            if (d.bgColor) header.style.backgroundColor = d.bgColor;
+            else header.style.backgroundColor = '';
+            var logo = header.querySelector('.logo-text');
+            if (logo) {
+              if (d.logoColor) logo.style.color = d.logoColor;
+              else logo.style.color = '';
+            }
+            var cta = header.querySelector('.header-cta');
+            if (cta) {
+              if (d.ctaBgColor) cta.style.backgroundColor = d.ctaBgColor;
+              else cta.style.backgroundColor = '';
+              if (d.ctaTextColor) cta.style.color = d.ctaTextColor;
+              else cta.style.color = '';
+              if (d.ctaText) cta.textContent = d.ctaText;
             }
           }
         }

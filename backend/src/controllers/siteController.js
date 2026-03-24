@@ -40,10 +40,18 @@ export const create = async (req, res, next) => {
 
 export const update = async (req, res, next) => {
   try {
-    const site = await Site.findByIdAndUpdate(req.params.id, req.body, {
-      new: true, runValidators: true,
-    });
+    const site = await Site.findById(req.params.id);
     if (!site) return res.status(404).json({ error: 'Site not found' });
+    // Deep merge to support nested objects like header, design, etc.
+    for (const [key, value] of Object.entries(req.body)) {
+      if (value && typeof value === 'object' && !Array.isArray(value) && site[key] && typeof site[key] === 'object') {
+        Object.assign(site[key], value);
+        site.markModified(key);
+      } else {
+        site[key] = value;
+      }
+    }
+    await site.save();
     res.json({ site });
   } catch (err) { next(err); }
 };
