@@ -4,10 +4,12 @@ import { Sparkles, Search, CheckCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { pagesApi, aiApi } from '../services/api';
 import useSiteStore from '../stores/siteStore';
+import { useIsAdmin } from '../stores/authStore';
 
 export default function SeoPage() {
   const { siteId } = useParams();
   const { currentSite } = useSiteStore();
+  const isAdmin = useIsAdmin();
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPageId, setSelectedPageId] = useState(null);
@@ -99,26 +101,28 @@ export default function SeoPage() {
         </span>
       </div>
 
-      {/* Global SEO optimization */}
-      <button
-        onClick={async () => {
-          try {
-            setOptimizing(true);
-            const res = await aiApi.optimizeSeo(siteId);
-            const refreshed = await pagesApi.getBySite(siteId);
-            setPages(refreshed.pages);
-            const current = refreshed.pages.find(p => p._id === selectedPageId);
-            if (current) setSeo(current.seo || { title: '', description: '', keywords: [] });
-            toast.success(`SEO optimisé pour ${res.pages.length} pages`);
-          } catch (err) {
-            toast.error(err.response?.data?.error || err.message);
-          } finally { setOptimizing(false); }
-        }}
-        disabled={optimizing || pages.length === 0}
-        className="mb-4 flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-sm font-medium hover:bg-blue-100 disabled:opacity-50"
-      >
-        <Sparkles size={16} /> {optimizing ? 'Optimisation en cours...' : 'Optimiser le SEO de toutes les pages'}
-      </button>
+      {/* Global SEO optimization — admin only */}
+      {isAdmin && (
+        <button
+          onClick={async () => {
+            try {
+              setOptimizing(true);
+              const res = await aiApi.optimizeSeo(siteId);
+              const refreshed = await pagesApi.getBySite(siteId);
+              setPages(refreshed.pages);
+              const current = refreshed.pages.find(p => p._id === selectedPageId);
+              if (current) setSeo(current.seo || { title: '', description: '', keywords: [] });
+              toast.success(`SEO optimisé pour ${res.pages.length} pages`);
+            } catch (err) {
+              toast.error(err.response?.data?.error || err.message);
+            } finally { setOptimizing(false); }
+          }}
+          disabled={optimizing || pages.length === 0}
+          className="mb-4 flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-sm font-medium hover:bg-blue-100 disabled:opacity-50"
+        >
+          <Sparkles size={16} /> {optimizing ? 'Optimisation en cours...' : 'Optimiser le SEO de toutes les pages'}
+        </button>
+      )}
 
       {/* Page selector */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2" role="tablist" aria-label="Sélecteur de page">
@@ -139,14 +143,16 @@ export default function SeoPage() {
 
       {selectedPageId && (
         <div className="bg-white rounded-xl p-6 space-y-6">
-          {/* AI Button */}
-          <button
-            onClick={handleAIGenerate}
-            disabled={aiGenerating}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-100 disabled:opacity-50"
-          >
-            <Sparkles size={16} /> {aiGenerating ? 'Génération...' : 'Générer avec l\'IA'}
-          </button>
+          {/* AI Button — admin only */}
+          {isAdmin && (
+            <button
+              onClick={handleAIGenerate}
+              disabled={aiGenerating}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-100 disabled:opacity-50"
+            >
+              <Sparkles size={16} /> {aiGenerating ? 'Génération...' : 'Générer avec l\'IA'}
+            </button>
+          )}
 
           {/* Title */}
           <div>

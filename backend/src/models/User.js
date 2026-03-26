@@ -5,6 +5,8 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   name: { type: String, required: true, trim: true },
   passwordHash: { type: String, required: true, select: false },
+  role: { type: String, enum: ['admin', 'client'], default: 'admin' },
+  assignedSites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Site' }],
   isActive: { type: Boolean, default: true },
   lastLogin: Date,
 }, { timestamps: true });

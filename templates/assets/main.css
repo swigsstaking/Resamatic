@@ -422,7 +422,7 @@
 }
 .review-card-date {
   font-size: 0.72rem;
-  color: #999;
+  color: #717171;
 }
 /* Responsive reviews */
 @media (max-width: 768px) {

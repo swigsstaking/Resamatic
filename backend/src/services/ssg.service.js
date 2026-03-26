@@ -224,6 +224,7 @@ function generateLlmsFullTxt(site, pages) {
 }
 
 export async function buildSite(siteId) {
+  await Site.findByIdAndUpdate(siteId, { deployStep: 'building', deployProgress: 10 });
   await loadTemplates();
 
   const site = await Site.findById(siteId)

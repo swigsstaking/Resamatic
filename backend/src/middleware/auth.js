@@ -7,6 +7,22 @@ export const generateToken = (userId) => {
   });
 };
 
+export const requireAdmin = (req, res, next) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+};
+
+export const requireSiteAccess = (req, res, next) => {
+  if (req.user.role === 'admin') return next();
+  const siteId = req.params.siteId || req.params.id;
+  if (!siteId || !req.user.assignedSites.some(id => id.toString() === siteId)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  next();
+};
+
 export const requireAuth = async (req, res, next) => {
   try {
     const header = req.headers.authorization;

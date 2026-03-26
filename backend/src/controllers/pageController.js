@@ -40,6 +40,9 @@ export const getOne = async (req, res, next) => {
   try {
     const page = await Page.findById(req.params.id);
     if (!page) return res.status(404).json({ error: 'Page not found' });
+    if (req.user.role === 'client' && !req.user.assignedSites.some(id => id.toString() === page.siteId.toString())) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     res.json({ page });
   } catch (err) { next(err); }
 };
@@ -117,18 +120,25 @@ export const create = async (req, res, next) => {
 
 export const update = async (req, res, next) => {
   try {
-    const page = await Page.findByIdAndUpdate(req.params.id, req.body, {
-      new: true, runValidators: true,
-    });
+    const page = await Page.findById(req.params.id);
     if (!page) return res.status(404).json({ error: 'Page not found' });
+    if (req.user.role === 'client' && !req.user.assignedSites.some(id => id.toString() === page.siteId.toString())) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    Object.assign(page, req.body);
+    await page.save();
     res.json({ page });
   } catch (err) { next(err); }
 };
 
 export const remove = async (req, res, next) => {
   try {
-    const page = await Page.findByIdAndDelete(req.params.id);
+    const page = await Page.findById(req.params.id);
     if (!page) return res.status(404).json({ error: 'Page not found' });
+    if (req.user.role === 'client' && !req.user.assignedSites.some(id => id.toString() === page.siteId.toString())) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    await page.deleteOne();
     res.json({ message: 'Page deleted' });
   } catch (err) { next(err); }
 };
@@ -138,6 +148,9 @@ export const updateSection = async (req, res, next) => {
     const { id, sectionIdx } = req.params;
     const page = await Page.findById(id);
     if (!page) return res.status(404).json({ error: 'Page not found' });
+    if (req.user.role === 'client' && !req.user.assignedSites.some(sid => sid.toString() === page.siteId.toString())) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     const idx = parseInt(sectionIdx);
     if (idx < 0 || idx >= page.sections.length) {
@@ -169,6 +182,9 @@ export const updateSections = async (req, res, next) => {
   try {
     const page = await Page.findById(req.params.id);
     if (!page) return res.status(404).json({ error: 'Page not found' });
+    if (req.user.role === 'client' && !req.user.assignedSites.some(id => id.toString() === page.siteId.toString())) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     page.sections = req.body.sections;
 

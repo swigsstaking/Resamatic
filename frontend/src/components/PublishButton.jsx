@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { deployApi } from '../services/api';
 import useSiteStore from '../stores/siteStore';
 import { trackSitePublished } from '../lib/posthog';
+import DeployProgressModal from './DeployProgressModal';
 
 const SERVER_IP = '213.221.149.157';
 
@@ -11,6 +12,8 @@ export default function PublishButton({ siteId, status, domain, compact = false 
   const [publishing, setPublishing] = useState(false);
   const [publishStatus, setPublishStatus] = useState(status);
   const [showDnsModal, setShowDnsModal] = useState(false);
+  const [showDeployModal, setShowDeployModal] = useState(false);
+  const [deployData, setDeployData] = useState({ deployStep: null, deployProgress: 0, buildError: null });
   const pollRef = useRef(null);
   const { fetchSites, currentSite } = useSiteStore();
 
@@ -33,48 +36,56 @@ export default function PublishButton({ siteId, status, domain, compact = false 
   const handlePublishClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!siteDomain) {
-      setShowDnsModal(true);
-      return;
-    }
     setShowDnsModal(true);
+  };
+
+  const startPolling = () => {
+    pollRef.current = setInterval(async () => {
+      try {
+        const data = await deployApi.status(siteId);
+        setPublishStatus(data.status);
+        setDeployData({ deployStep: data.deployStep, deployProgress: data.deployProgress, buildError: data.buildError });
+        if (data.status === 'published') {
+          clearInterval(pollRef.current);
+          setPublishing(false);
+          trackSitePublished(siteId, currentSite?.name, siteDomain);
+        } else if (data.status === 'error') {
+          clearInterval(pollRef.current);
+          setPublishing(false);
+        }
+      } catch {
+        clearInterval(pollRef.current);
+        setPublishing(false);
+      }
+    }, 2000);
   };
 
   const handleConfirmPublish = async () => {
     setShowDnsModal(false);
     setPublishing(true);
     setPublishStatus('building');
+    setDeployData({ deployStep: 'building', deployProgress: 5, buildError: null });
+    setShowDeployModal(true);
 
     try {
       await deployApi.publish(siteId);
-      toast.success('Build et déploiement en cours...');
-
-      pollRef.current = setInterval(async () => {
-        try {
-          const data = await deployApi.status(siteId);
-          setPublishStatus(data.status);
-          if (data.status === 'published') {
-            clearInterval(pollRef.current);
-            setPublishing(false);
-            trackSitePublished(siteId, currentSite?.name, siteDomain);
-            toast.success(`Site publié sur ${siteDomain}`);
-            fetchSites();
-          } else if (data.status === 'error') {
-            clearInterval(pollRef.current);
-            setPublishing(false);
-            toast.error(`Erreur: ${data.buildError || 'Inconnue'}`);
-            fetchSites();
-          }
-        } catch {
-          clearInterval(pollRef.current);
-          setPublishing(false);
-        }
-      }, 3000);
+      startPolling();
     } catch (err) {
       setPublishing(false);
       setPublishStatus('error');
-      toast.error(err?.error || 'Erreur lors du déploiement');
+      setDeployData(d => ({ ...d, buildError: err?.error || 'Erreur lors du déploiement' }));
     }
+  };
+
+  const handleRetry = () => {
+    setShowDeployModal(false);
+    handleConfirmPublish();
+  };
+
+  const handleCloseDeployModal = () => {
+    setShowDeployModal(false);
+    if (pollRef.current) clearInterval(pollRef.current);
+    fetchSites();
   };
 
   const icon = publishing ? <Loader size={compact ? 14 : 16} className="animate-spin" /> :
@@ -106,6 +117,18 @@ export default function PublishButton({ siteId, status, domain, compact = false 
           onConfirm={handleConfirmPublish}
           onClose={() => setShowDnsModal(false)}
           onDomainChange={handleDomainChange}
+        />
+      )}
+
+      {showDeployModal && (
+        <DeployProgressModal
+          deployStep={deployData.deployStep}
+          deployProgress={deployData.deployProgress}
+          status={publishStatus}
+          buildError={deployData.buildError}
+          domain={siteDomain}
+          onClose={handleCloseDeployModal}
+          onRetry={handleRetry}
         />
       )}
     </>

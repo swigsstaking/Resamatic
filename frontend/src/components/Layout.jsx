@@ -1,12 +1,13 @@
 import { Outlet, NavLink, useParams, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Globe, Settings, FileText, Image, Search, LogOut, Plus, Rocket, ArrowLeft } from 'lucide-react';
-import useAuthStore from '../stores/authStore';
+import { LayoutDashboard, Globe, Settings, FileText, Image, Search, LogOut, Plus, Rocket, ArrowLeft, Users } from 'lucide-react';
+import useAuthStore, { useIsAdmin } from '../stores/authStore';
 import useSiteStore from '../stores/siteStore';
 import { useEffect } from 'react';
 
 export default function Layout() {
   const { siteId } = useParams();
   const { user, logout } = useAuthStore();
+  const isAdmin = useIsAdmin();
   const { currentSite, fetchSite } = useSiteStore();
   const navigate = useNavigate();
 
@@ -49,9 +50,16 @@ export default function Layout() {
               <NavLink to="/" end className={linkClass}>
                 <LayoutDashboard size={18} /> Dashboard
               </NavLink>
-              <NavLink to="/sites/new" className={linkClass}>
-                <Plus size={18} /> Nouveau site
-              </NavLink>
+              {isAdmin && (
+                <NavLink to="/sites/new" className={linkClass}>
+                  <Plus size={18} /> Nouveau site
+                </NavLink>
+              )}
+              {isAdmin && (
+                <NavLink to="/users" className={linkClass}>
+                  <Users size={18} /> Utilisateurs
+                </NavLink>
+              )}
             </>
           )}
 
@@ -80,12 +88,17 @@ export default function Layout() {
 
         <div className="p-4 border-t border-gray-200">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600 truncate" title={user?.name}>{user?.name}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm text-gray-600 truncate" title={user?.name}>{user?.name}</span>
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${user?.role === 'admin' ? 'bg-accent/10 text-accent-text' : 'bg-gray-100 text-gray-500'}`}>
+                {user?.role === 'admin' ? 'Admin' : 'Client'}
+              </span>
+            </div>
             <button onClick={handleLogout} className="text-gray-400 hover:text-danger transition-colors" aria-label="Se déconnecter">
               <LogOut size={18} />
             </button>
           </div>
-          <span className="text-xs text-gray-400 mt-1 block">v0.1.7</span>
+          <span className="text-xs text-gray-400 mt-1 block">v0.1.8</span>
         </div>
       </aside>
 

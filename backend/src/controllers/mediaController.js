@@ -42,26 +42,35 @@ export const getOne = async (req, res, next) => {
   try {
     const media = await Media.findById(req.params.id);
     if (!media) return res.status(404).json({ error: 'Media not found' });
+    if (req.user.role === 'client' && !req.user.assignedSites.some(id => id.toString() === media.siteId.toString())) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     res.json({ media });
   } catch (err) { next(err); }
 };
 
 export const update = async (req, res, next) => {
   try {
-    const allowed = {};
-    if (req.body.alt !== undefined) allowed.alt = req.body.alt;
-    if (req.body.folder !== undefined) allowed.folder = req.body.folder;
-
-    const media = await Media.findByIdAndUpdate(req.params.id, allowed, { new: true });
+    const media = await Media.findById(req.params.id);
     if (!media) return res.status(404).json({ error: 'Media not found' });
+    if (req.user.role === 'client' && !req.user.assignedSites.some(id => id.toString() === media.siteId.toString())) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    if (req.body.alt !== undefined) media.alt = req.body.alt;
+    if (req.body.folder !== undefined) media.folder = req.body.folder;
+    await media.save();
     res.json({ media });
   } catch (err) { next(err); }
 };
 
 export const remove = async (req, res, next) => {
   try {
-    const media = await Media.findByIdAndDelete(req.params.id);
+    const media = await Media.findById(req.params.id);
     if (!media) return res.status(404).json({ error: 'Media not found' });
+    if (req.user.role === 'client' && !req.user.assignedSites.some(id => id.toString() === media.siteId.toString())) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    await media.deleteOne();
     await deleteMediaFiles(media);
     res.json({ message: 'Media deleted' });
   } catch (err) { next(err); }

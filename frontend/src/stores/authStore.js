@@ -29,3 +29,5 @@ const useAuthStore = create((set) => ({
 }));
 
 export default useAuthStore;
+
+export const useIsAdmin = () => useAuthStore(state => state.user?.role === 'admin');

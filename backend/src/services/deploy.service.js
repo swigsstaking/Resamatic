@@ -74,6 +74,7 @@ export async function deploySite(siteId) {
 
   try {
     // 1. Create target directory
+    await Site.findByIdAndUpdate(siteId, { deployStep: 'uploading', deployProgress: 25 });
     await runSudo(`mkdir -p ${remoteDir} && chown ${user}:${user} ${remoteDir}`);
 
     // 2. Copy/rsync build files
@@ -86,6 +87,7 @@ export async function deploySite(siteId) {
     }
 
     // 3. Write Nginx config — only if no config exists yet (preserve SSL configs)
+    await Site.findByIdAndUpdate(siteId, { deployStep: 'configuring', deployProgress: 55 });
     const configPath = `/etc/nginx/sites-available/${site.domain}`;
     const enabledPath = `/etc/nginx/sites-enabled/${site.domain}`;
 
@@ -107,12 +109,18 @@ export async function deploySite(siteId) {
     await runSudo('nginx -t');
     await runSudo('systemctl reload nginx');
 
-    // 5. SSL with Certbot — only if no cert exists yet
+    // 5. SSL with Certbot — run if no cert OR if nginx config lacks SSL (fresh config)
+    await Site.findByIdAndUpdate(siteId, { deployStep: 'ssl', deployProgress: 75 });
     try {
       const { stdout: certCheck } = await runSudo(
         `test -d /etc/letsencrypt/live/${site.domain} && echo EXISTS || echo MISSING`
       );
-      if (certCheck.trim().includes('MISSING')) {
+      const { stdout: sslInConfig } = await runSudo(
+        `grep -q ssl_certificate ${configPath} 2>/dev/null && echo HAS_SSL || echo NO_SSL`
+      );
+      const needsCertbot = certCheck.trim().includes('MISSING') || sslInConfig.trim().includes('NO_SSL');
+
+      if (needsCertbot) {
         const domainParts = site.domain.split('.');
         const isSubdomain = domainParts.length > 2;
         const certbotDomains = isSubdomain
@@ -125,7 +133,7 @@ export async function deploySite(siteId) {
         );
         console.log('[deploy] Certbot output:', stdout || stderr);
       } else {
-        console.log('[deploy] SSL cert already exists, reusing');
+        console.log('[deploy] SSL cert and nginx config already OK, skipping');
       }
     } catch (certErr) {
       console.error('[deploy] Certbot failed:', certErr.message);
@@ -137,6 +145,8 @@ export async function deploySite(siteId) {
       status: 'published',
       lastPublishedAt: new Date(),
       buildError: null,
+      deployStep: null,
+      deployProgress: 100,
     });
 
     return { success: true, url: `https://${site.domain}` };
@@ -144,6 +154,8 @@ export async function deploySite(siteId) {
     await Site.findByIdAndUpdate(siteId, {
       status: 'error',
       buildError: err.message,
+      deployStep: null,
+      deployProgress: 0,
     });
     throw err;
   }
@@ -158,4 +170,53 @@ export async function unpublishSite(siteId) {
 
   await Site.findByIdAndUpdate(siteId, { status: 'draft' });
   return { success: true };
+}
+
+export async function cleanupSiteFiles(site) {
+  const { sitesDir } = getConfig();
+  const buildDir = path.resolve(process.env.BUILD_OUTPUT_DIR || './builds', site.slug);
+  const cleaned = { server: false, nginx: false, build: false };
+
+  // 1. Remove deployed files from server
+  if (site.domain) {
+    const remoteDir = `${sitesDir}/${site.domain}`;
+    try {
+      await runSudo(`rm -rf ${remoteDir}`);
+      cleaned.server = true;
+      console.log('[cleanup] Removed server files:', remoteDir);
+    } catch (err) {
+      console.warn('[cleanup] Failed to remove server files:', err.message);
+    }
+
+    // 2. Remove Nginx config + symlink
+    try {
+      await runSudo(`rm -f /etc/nginx/sites-enabled/${site.domain}`);
+      await runSudo(`rm -f /etc/nginx/sites-available/${site.domain}`);
+      await runSudo('nginx -t && systemctl reload nginx');
+      cleaned.nginx = true;
+      console.log('[cleanup] Removed nginx config for', site.domain);
+    } catch (err) {
+      console.warn('[cleanup] Failed to remove nginx config:', err.message);
+    }
+
+    // 2b. Remove SSL certificate (so certbot reconfigures cleanly on next deploy)
+    try {
+      await runSudo(`certbot delete --cert-name ${site.domain} --non-interactive 2>/dev/null || true`);
+      console.log('[cleanup] Removed SSL cert for', site.domain);
+    } catch (err) {
+      console.warn('[cleanup] Failed to remove SSL cert:', err.message);
+    }
+  }
+
+  // 3. Remove local build directory
+  try {
+    const fs = await import('fs/promises');
+    await fs.rm(buildDir, { recursive: true, force: true });
+    cleaned.build = true;
+    console.log('[cleanup] Removed local build:', buildDir);
+  } catch (err) {
+    console.warn('[cleanup] Failed to remove local build:', err.message);
+  }
+
+  return cleaned;
 }

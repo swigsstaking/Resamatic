@@ -3,10 +3,14 @@ import Page from '../models/Page.js';
 import Media from '../models/Media.js';
 import slugify from 'slugify';
 import { getGoogleReviews } from '../services/google-reviews.service.js';
+import { cleanupSiteFiles } from '../services/deploy.service.js';
 
 export const list = async (req, res, next) => {
   try {
-    const sites = await Site.find().sort({ updatedAt: -1 });
+    const query = req.user.role === 'client'
+      ? { _id: { $in: req.user.assignedSites } }
+      : {};
+    const sites = await Site.find(query).sort({ updatedAt: -1 });
     res.json({ sites });
   } catch (err) { next(err); }
 };
@@ -64,7 +68,9 @@ export const remove = async (req, res, next) => {
     // Cascade delete pages and media
     await Page.deleteMany({ siteId: site._id });
     await Media.deleteMany({ siteId: site._id });
-    res.json({ message: 'Site deleted' });
+    // Cleanup server files, nginx config, local build
+    const cleaned = await cleanupSiteFiles(site);
+    res.json({ message: 'Site deleted', cleaned });
   } catch (err) { next(err); }
 };
 

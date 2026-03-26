@@ -11,6 +11,7 @@ import {
 import toast from 'react-hot-toast';
 import { pagesApi, buildApi, aiApi, sitesApi } from '../services/api';
 import useSiteStore from '../stores/siteStore';
+import { useIsAdmin } from '../stores/authStore';
 import MediaPicker from '../components/MediaPicker';
 import RichTextEditor from '../components/RichTextEditor';
 
@@ -43,6 +44,7 @@ const VIEWPORT_WIDTHS = { desktop: '100%', tablet: '768px', mobile: '375px' };
 export default function PageEditorPage() {
   const { siteId, pageId } = useParams();
   const navigate = useNavigate();
+  const isAdmin = useIsAdmin();
   const { currentSite, fetchSite, updateSite } = useSiteStore();
   const [page, setPage] = useState(null);
   const [allPages, setAllPages] = useState([]);
@@ -475,7 +477,7 @@ export default function PageEditorPage() {
                     section={section}
                     idx={selectedSection}
                     onChange={updateSectionData}
-                    onAIRewrite={handleAIRewrite}
+                    onAIRewrite={isAdmin ? handleAIRewrite : null}
                     onMediaPick={openMediaPicker}
                     site={currentSite}
                   />
@@ -673,12 +675,14 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
     <div key={field} className="mb-2.5" data-editor-field={field}>
       <div className="flex items-center justify-between mb-0.5">
         <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{label}</label>
-        <button
-          onClick={() => onAIRewrite(field, d[field] || '')}
-          className="text-[9px] text-accent/60 hover:text-accent flex items-center gap-0.5"
-        >
-          <Sparkles size={8} /> IA
-        </button>
+        {onAIRewrite && (
+          <button
+            onClick={() => onAIRewrite(field, d[field] || '')}
+            className="text-[9px] text-accent/60 hover:text-accent flex items-center gap-0.5"
+          >
+            <Sparkles size={8} /> IA
+          </button>
+        )}
       </div>
       <textarea
         value={d[field] || ''}
@@ -696,12 +700,14 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
     <div key={field} className="mb-2.5" data-editor-field={field}>
       <div className="flex items-center justify-between mb-0.5">
         <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{label}</span>
-        <button
-          onClick={() => onAIRewrite(field, d[field] || '')}
-          className="text-[9px] text-accent/60 hover:text-accent flex items-center gap-0.5"
-        >
-          <Sparkles size={8} /> IA
-        </button>
+        {onAIRewrite && (
+          <button
+            onClick={() => onAIRewrite(field, d[field] || '')}
+            className="text-[9px] text-accent/60 hover:text-accent flex items-center gap-0.5"
+          >
+            <Sparkles size={8} /> IA
+          </button>
+        )}
       </div>
       <RichTextEditor value={d[field] || ''} onChange={val => onChange(idx, field, val)} />
     </div>

@@ -9,6 +9,9 @@ export const publish = async (req, res, next) => {
     if (!site.domain) return res.status(400).json({ error: 'Domain not configured' });
 
     site.status = 'building';
+    site.deployStep = 'building';
+    site.deployProgress = 5;
+    site.buildError = null;
     await site.save();
 
     // Build then deploy — async
@@ -35,10 +38,12 @@ export const unpublish = async (req, res, next) => {
 export const getDeployStatus = async (req, res, next) => {
   try {
     const site = await Site.findById(req.params.siteId)
-      .select('status lastBuiltAt lastPublishedAt buildError domain');
+      .select('status lastBuiltAt lastPublishedAt buildError domain deployStep deployProgress');
     if (!site) return res.status(404).json({ error: 'Site not found' });
     res.json({
       status: site.status,
+      deployStep: site.deployStep,
+      deployProgress: site.deployProgress || 0,
       lastBuiltAt: site.lastBuiltAt,
       lastPublishedAt: site.lastPublishedAt,
       buildError: site.buildError,

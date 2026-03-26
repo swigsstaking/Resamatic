@@ -12,12 +12,19 @@ async function seed() {
 
   const existing = await User.findOne({ email: ADMIN_EMAIL });
   if (existing) {
-    console.log(`Admin user already exists: ${ADMIN_EMAIL}`);
+    if (!existing.role) {
+      existing.role = 'admin';
+      await existing.save();
+      console.log(`Admin role patched on existing user: ${ADMIN_EMAIL}`);
+    } else {
+      console.log(`Admin user already exists: ${ADMIN_EMAIL}`);
+    }
   } else {
     await User.create({
       email: ADMIN_EMAIL,
       name: ADMIN_NAME,
       passwordHash: ADMIN_PASSWORD,
+      role: 'admin',
     });
     console.log(`Admin user created: ${ADMIN_EMAIL}`);
   }

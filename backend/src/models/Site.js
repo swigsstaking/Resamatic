@@ -86,6 +86,8 @@ const siteSchema = new mongoose.Schema({
   lastBuiltAt: Date,
   lastPublishedAt: Date,
   buildError: String,
+  deployStep: { type: String, default: null },
+  deployProgress: { type: Number, default: 0 },
 }, { timestamps: true });
 
 export default mongoose.model('Site', siteSchema);

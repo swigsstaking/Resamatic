@@ -80,4 +80,13 @@ export const aiApi = {
   generateAlt: (data) => api.post('/ai/generate-alt', data),
 };
 
+export const usersApi = {
+  getAll: () => api.get('/users'),
+  getOne: (id) => api.get(`/users/${id}`),
+  create: (data) => api.post('/users', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  delete: (id) => api.delete(`/users/${id}`),
+  resetPassword: (id, data) => api.post(`/users/${id}/reset-password`, data),
+};
+
 export default api;

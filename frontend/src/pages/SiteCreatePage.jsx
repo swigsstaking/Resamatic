@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import useSiteStore from '../stores/siteStore';
 import { pagesApi, aiApi, buildApi, mediaApi, sitesApi } from '../services/api';
 import { trackSiteCreated, trackMediaUploaded, trackAIGeneration } from '../lib/posthog';
+import CreateProgressModal from '../components/CreateProgressModal';
 
 const STEPS = ['1. Entreprise & contact', '2. Design & couleurs', '3. Pages & mots-clés'];
 
@@ -18,6 +19,15 @@ export default function SiteCreatePage() {
   const navigate = useNavigate();
   const { createSite } = useSiteStore();
 
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [progressSteps, setProgressSteps] = useState([]);
+  const [currentStepIdx, setCurrentStepIdx] = useState(0);
+  const [createStatus, setCreateStatus] = useState('in_progress'); // 'in_progress' | 'done' | 'error'
+  const [createError, setCreateError] = useState(null);
+  const [createdSiteId, setCreatedSiteId] = useState(null);
+
+  const [logoFile, setLogoFile] = useState(null); // { file: File, preview: string } | null
+  const [faviconFile, setFaviconFile] = useState(null);
   const [images, setImages] = useState([]); // { file: File, preview: string }[]
 
   const onDropImages = useCallback((files) => {
@@ -102,7 +112,31 @@ export default function SiteCreatePage() {
     if (!validateStep(2)) return;
     setLoading(true);
     if (useAI) setAiLoading(true);
+
+    // Build dynamic steps
+    const steps = [{ key: 'creating', label: 'Création du site', icon: 'FolderPlus' }];
+    if (images.length > 0) steps.push({ key: 'images', label: `Upload des images (0/${images.length})`, icon: 'ImageIcon' });
+    steps.push({ key: 'pages', label: 'Création des pages', icon: 'FileText' });
+    if (form.business?.googleMapsUrl) steps.push({ key: 'reviews', label: 'Récupération des avis Google', icon: 'Star' });
+    if (useAI) {
+      form.pages.forEach((p, i) => steps.push({ key: `ai-page-${i}`, label: `IA — Page ${i + 1}/${form.pages.length} : ${p.keyword || p.title}`, icon: 'Sparkles' }));
+      steps.push({ key: 'ai-contact', label: 'IA — Page Contact', icon: 'Phone' });
+      steps.push({ key: 'seo', label: 'Optimisation SEO inter-pages', icon: 'Search' });
+    }
+    steps.push({ key: 'build', label: 'Construction du site', icon: 'Hammer' });
+    steps.push({ key: 'done', label: 'Site prêt !', icon: 'CheckCircle' });
+
+    setProgressSteps(steps);
+    setCurrentStepIdx(0);
+    setCreateStatus('in_progress');
+    setCreateError(null);
+    setShowProgressModal(true);
+
+    let stepIdx = 0;
+    const advance = (key) => { stepIdx = steps.findIndex(s => s.key === key); setCurrentStepIdx(stepIdx); };
+
     try {
+      advance('creating');
       const site = await createSite({
         name: form.name,
         domain: form.domain || undefined,
@@ -110,12 +144,38 @@ export default function SiteCreatePage() {
         design: form.design,
         posthog: form.posthog,
       });
+      setCreatedSiteId(site._id);
+
+      // Upload logo & favicon if provided
+      const designUpdate = {};
+      if (logoFile) {
+        try {
+          const fd = new FormData(); fd.append('file', logoFile.file);
+          const { media } = await mediaApi.upload(site._id, fd);
+          designUpdate.logoMediaId = media._id;
+        } catch (err) { console.error('Logo upload error:', err); }
+      }
+      if (faviconFile) {
+        try {
+          const fd = new FormData(); fd.append('file', faviconFile.file);
+          const { media } = await mediaApi.upload(site._id, fd);
+          designUpdate.faviconMediaId = media._id;
+        } catch (err) { console.error('Favicon upload error:', err); }
+      }
+      if (Object.keys(designUpdate).length > 0) {
+        try {
+          const { updateSite } = useSiteStore.getState();
+          await updateSite(site._id, { design: { ...site.design, ...designUpdate } });
+        } catch (err) { console.error('Design update error:', err); }
+      }
 
       // Upload images if any
       const uploadedMediaIds = [];
       if (images.length > 0) {
-        setAiProgress('Upload des images...');
-        for (const img of images) {
+        advance('images');
+        for (let i = 0; i < images.length; i++) {
+          setProgressSteps(prev => prev.map(s => s.key === 'images' ? { ...s, label: `Upload des images (${i + 1}/${images.length})` } : s));
+          const img = images[i];
           try {
             const formData = new FormData();
             formData.append('file', img.file);
@@ -128,6 +188,7 @@ export default function SiteCreatePage() {
       }
 
       // Create pages
+      advance('pages');
       const totalPages = form.pages.length + 1; // +1 for contact page
 
       // Step 1: Create all pages first to get real slugs from backend
@@ -151,7 +212,7 @@ export default function SiteCreatePage() {
       let googleReviewsData = null;
       if (form.business?.googleMapsUrl) {
         try {
-          setAiProgress('Récupération des avis Google...');
+          advance('reviews');
           googleReviewsData = await sitesApi.fetchGoogleReviews(site._id);
         } catch (err) {
           console.warn('[GoogleReviews] Fetch failed, using AI reviews only:', err.message);
@@ -164,7 +225,7 @@ export default function SiteCreatePage() {
         if (useAI && pageConf.keyword) {
           setAiLoading(true);
           const pageIdx = createdPages.indexOf(created);
-          setAiProgress(`Page ${pageIdx + 1}/${totalPages} : ${pageConf.keyword}`);
+          advance(`ai-page-${pageIdx}`);
           try {
             const { content } = await aiApi.generatePage({
               siteId: site._id,
@@ -215,11 +276,17 @@ export default function SiteCreatePage() {
                   {
                     const currentIdx = createdPages.indexOf(created);
                     const otherPages = createdPages.filter((_, j) => j !== currentIdx);
-                    const allServices = otherPages.map((op) => ({
-                      name: op.conf.serviceFocus || op.conf.keyword || op.conf.title,
-                      shortDescription: '',
-                      linkUrl: op.href,
-                    }));
+                    const aiServices = content.servicesGrid?.services || [];
+                    const allServices = otherPages.map((op) => {
+                      const name = op.conf.serviceFocus || op.conf.keyword || op.conf.title;
+                      const nameLower = name.toLowerCase();
+                      const aiMatch = aiServices.find(s => s.name && (nameLower.includes(s.name.toLowerCase()) || s.name.toLowerCase().includes(nameLower)));
+                      return {
+                        name,
+                        shortDescription: aiMatch?.shortDescription || aiMatch?.description || '',
+                        linkUrl: op.href,
+                      };
+                    });
                     if (allServices.length <= 4) {
                       sData.data.services = allServices;
                     } else {
@@ -309,7 +376,7 @@ export default function SiteCreatePage() {
       }
 
       // Auto-create contact page + AI generation
-      setAiProgress(`Page ${totalPages}/${totalPages} : Contact`);
+      if (useAI) advance('ai-contact');
       try {
         const contactPage = await pagesApi.create(site._id, {
           title: 'Contact',
@@ -358,7 +425,7 @@ export default function SiteCreatePage() {
       // Optimize SEO across all pages (avoid keyword cannibalization)
       if (useAI) {
         try {
-          setAiProgress('Optimisation SEO inter-pages...');
+          advance('seo');
           await aiApi.optimizeSeo(site._id);
         } catch (err) {
           console.warn('[SEO] Cross-page optimization failed:', err.message);
@@ -368,13 +435,16 @@ export default function SiteCreatePage() {
       setAiLoading(false);
       trackSiteCreated(site, { pageCount: form.pages.length + 1, useAI, imageCount: images.length });
       if (uploadedMediaIds.length > 0) trackMediaUploaded(site._id, uploadedMediaIds.length);
+      advance('build');
       try {
         await buildApi.trigger(site._id);
       } catch {}
-      toast.success('Site créé avec succès !');
-      navigate(`/sites/${site._id}/pages`);
+      advance('done');
+      setCreateStatus('done');
     } catch (err) {
       const msg = err.error || err.message || 'Erreur lors de la création';
+      setCreateError(msg);
+      setCreateStatus('error');
       if (msg.includes('duplicate') || msg.includes('E11000') || msg.includes('domain')) {
         toast.error('Ce domaine est déjà utilisé par un autre site', { duration: 5000 });
       } else {
@@ -591,6 +661,53 @@ export default function SiteCreatePage() {
               </div>
             )}
           </div>
+
+          {/* Logo & Favicon */}
+          <hr className="border-gray-200" />
+          <h3 className="text-md font-semibold text-primary">Logo & Favicon (optionnel)</h3>
+          <p className="text-sm text-gray-500">Le logo s'affichera dans le header du site. Le favicon est l'icone de l'onglet du navigateur.</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-1.5 block">Logo</label>
+              {logoFile ? (
+                <div className="relative w-full h-24 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
+                  <img src={logoFile.preview} alt="Logo" className="max-h-full max-w-full object-contain p-2" />
+                  <button onClick={() => { URL.revokeObjectURL(logoFile.preview); setLogoFile(null); }} className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center">
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-24 rounded-lg border-2 border-dashed border-gray-300 hover:border-accent cursor-pointer transition-colors bg-gray-50">
+                  <Upload size={18} className="text-gray-400 mb-1" />
+                  <span className="text-xs text-gray-400">Importer le logo</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) setLogoFile({ file: f, preview: URL.createObjectURL(f) });
+                  }} />
+                </label>
+              )}
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-1.5 block">Favicon</label>
+              {faviconFile ? (
+                <div className="relative w-full h-24 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
+                  <img src={faviconFile.preview} alt="Favicon" className="max-h-full max-w-full object-contain p-2" />
+                  <button onClick={() => { URL.revokeObjectURL(faviconFile.preview); setFaviconFile(null); }} className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center">
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-24 rounded-lg border-2 border-dashed border-gray-300 hover:border-accent cursor-pointer transition-colors bg-gray-50">
+                  <Upload size={18} className="text-gray-400 mb-1" />
+                  <span className="text-xs text-gray-400">Importer le favicon</span>
+                  <input type="file" accept="image/*,.ico" className="hidden" onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) setFaviconFile({ file: f, preview: URL.createObjectURL(f) });
+                  }} />
+                </label>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -713,6 +830,19 @@ export default function SiteCreatePage() {
           )}
         </div>
       </div>
+      {showProgressModal && (
+        <CreateProgressModal
+          steps={progressSteps}
+          currentIndex={currentStepIdx}
+          status={createStatus}
+          error={createError}
+          siteId={createdSiteId}
+          onClose={() => {
+            setShowProgressModal(false);
+            if (createStatus === 'done' && createdSiteId) navigate(`/sites/${createdSiteId}/pages`);
+          }}
+        />
+      )}
     </div>
   );
 }

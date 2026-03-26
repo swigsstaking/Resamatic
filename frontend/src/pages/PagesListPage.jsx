@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FileText, Plus, Trash2, Eye, GripVertical } from 'lucide-react';
+import { FileText, Plus, Trash2, Eye, GripVertical, Link2 } from 'lucide-react';
+import { useIsAdmin } from '../stores/authStore';
 import toast from 'react-hot-toast';
 import { pagesApi, buildApi } from '../services/api';
 import PublishButton from '../components/PublishButton';
@@ -9,6 +10,7 @@ import { trackSitePreview, trackEvent } from '../lib/posthog';
 
 export default function PagesListPage() {
   const { siteId } = useParams();
+  const isAdmin = useIsAdmin();
   const { currentSite } = useSiteStore();
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +58,16 @@ export default function PagesListPage() {
     } catch { toast.error('Erreur de build'); }
   };
 
+  const handleCopyPreviewLink = async () => {
+    try {
+      await buildApi.trigger(siteId);
+      const apiBase = import.meta.env.VITE_API_URL || window.location.origin + '/api';
+      const previewUrl = `${apiBase}/build/${siteId}/preview/index.html`;
+      await navigator.clipboard.writeText(previewUrl);
+      toast.success('Lien d\'aperçu copié !');
+    } catch { toast.error('Erreur'); }
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -64,10 +76,15 @@ export default function PagesListPage() {
           <button onClick={handlePreview} className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200">
             <Eye size={16} /> Aperçu
           </button>
-          <PublishButton siteId={siteId} status={currentSite?.status} domain={currentSite?.domain} />
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 text-sm bg-accent text-primary rounded-lg hover:opacity-90">
-            <Plus size={16} /> Nouvelle page
+          <button onClick={handleCopyPreviewLink} className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200" title="Copier le lien d'aperçu pour le partager">
+            <Link2 size={16} /> Copier le lien
           </button>
+          {isAdmin && <PublishButton siteId={siteId} status={currentSite?.status} domain={currentSite?.domain} />}
+          {isAdmin && (
+            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 text-sm bg-accent text-primary rounded-lg hover:opacity-90">
+              <Plus size={16} /> Nouvelle page
+            </button>
+          )}
         </div>
       </div>
 
@@ -119,9 +136,11 @@ export default function PagesListPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Link to={`/sites/${siteId}/pages/${page._id}`} className="text-sm text-accent hover:underline">Éditer</Link>
-                <button onClick={() => handleDelete(page._id, page.title)} className="text-gray-400 hover:text-danger" aria-label={`Supprimer ${page.title}`}>
-                  <Trash2 size={16} />
-                </button>
+                {isAdmin && (
+                  <button onClick={() => handleDelete(page._id, page.title)} className="text-gray-400 hover:text-danger" aria-label={`Supprimer ${page.title}`}>
+                    <Trash2 size={16} />
+                  </button>
+                )}
               </div>
             </div>
           ))}

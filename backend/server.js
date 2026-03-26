@@ -16,6 +16,7 @@ import mediaRoutes from './src/routes/media.js';
 import buildRoutes from './src/routes/build.js';
 import deployRoutes from './src/routes/deploy.js';
 import aiRoutes from './src/routes/ai.js';
+import usersRoutes from './src/routes/users.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -71,6 +72,7 @@ app.use('/api/media', mediaRoutes);
 app.use('/api/build', buildRoutes);
 app.use('/api/deploy', deployRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/users', usersRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

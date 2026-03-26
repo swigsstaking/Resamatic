@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { upload, listBySite, getOne, update, remove } from '../controllers/mediaController.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireSiteAccess } from '../middleware/auth.js';
 
 const storage = multer.memoryStorage();
 const uploadMiddleware = multer({
@@ -19,8 +19,8 @@ const uploadMiddleware = multer({
 const router = Router();
 router.use(requireAuth);
 
-router.post('/site/:siteId/upload', uploadMiddleware.single('file'), upload);
-router.get('/site/:siteId', listBySite);
+router.post('/site/:siteId/upload', requireSiteAccess, uploadMiddleware.single('file'), upload);
+router.get('/site/:siteId', requireSiteAccess, listBySite);
 router.get('/:id', getOne);
 router.patch('/:id', update);
 router.delete('/:id', remove);

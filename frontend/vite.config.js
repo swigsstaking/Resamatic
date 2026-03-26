@@ -7,8 +7,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:3005',
-      '/uploads': 'http://localhost:3005',
+      '/api': 'https://resamatic.swigs.online',
+      '/uploads': 'https://resamatic.swigs.online',
     },
   },
 });

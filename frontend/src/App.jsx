@@ -12,6 +12,7 @@ const PagesListPage = lazy(() => import('./pages/PagesListPage'));
 const PageEditorPage = lazy(() => import('./pages/PageEditorPage'));
 const MediaLibraryPage = lazy(() => import('./pages/MediaLibraryPage'));
 const SeoPage = lazy(() => import('./pages/SeoPage'));
+const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
 
 function Loader() {
   return (
@@ -26,6 +27,12 @@ function ProtectedRoute({ children }) {
   // Still loading OR have a token but user not yet fetched — show loader
   if (loading || (token && !user)) return <Loader />;
   if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
+
+function AdminRoute({ children }) {
+  const { user } = useAuthStore();
+  if (user?.role !== 'admin') return <Navigate to="/" replace />;
   return children;
 }
 
@@ -58,11 +65,12 @@ export default function App() {
         <Route path="/sites/:siteId/pages/:pageId" element={<ProtectedRoute><PageEditorPage /></ProtectedRoute>} />
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<DashboardPage />} />
-          <Route path="sites/new" element={<SiteCreatePage />} />
+          <Route path="sites/new" element={<AdminRoute><SiteCreatePage /></AdminRoute>} />
           <Route path="sites/:siteId/settings" element={<SiteSettingsPage />} />
           <Route path="sites/:siteId/pages" element={<PagesListPage />} />
           <Route path="sites/:siteId/media" element={<MediaLibraryPage />} />
           <Route path="sites/:siteId/seo" element={<SeoPage />} />
+          <Route path="users" element={<AdminRoute><UserManagementPage /></AdminRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />

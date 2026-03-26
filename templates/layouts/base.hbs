@@ -6,13 +6,18 @@
   <title>{{#if page.seo.title}}{{page.seo.title}}{{else}}{{page.title}} - {{site.business.name}}{{/if}}{{#if site.seoDefaults.titleSuffix}} {{site.seoDefaults.titleSuffix}}{{/if}}</title>
   <meta name="description" content="{{#if page.seo.description}}{{page.seo.description}}{{else}}{{site.business.name}} - {{site.business.activity}} à {{site.business.city}}{{/if}}">
   {{#if page.seo.keywords}}<meta name="keywords" content="{{#each page.seo.keywords}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}">{{/if}}
-  {{#if page.seo.canonicalUrl}}<link rel="canonical" href="{{page.seo.canonicalUrl}}">{{/if}}
+  {{#if page.seo.canonicalUrl}}
+  <link rel="canonical" href="{{page.seo.canonicalUrl}}">
+  {{else if site.domain}}
+  <link rel="canonical" href="https://{{site.domain}}/{{#unless page.isMainHomepage}}{{page.slug}}.html{{/unless}}">
+  {{/if}}
 
   <!-- Open Graph -->
   <meta property="og:title" content="{{page.seo.title}}">
   <meta property="og:description" content="{{page.seo.description}}">
   <meta property="og:type" content="website">
   {{#if site.domain}}<meta property="og:url" content="https://{{site.domain}}/{{#unless page.isMainHomepage}}{{page.slug}}.html{{/unless}}">{{/if}}
+  {{#if heroImagePreload}}{{#if site.domain}}<meta property="og:image" content="https://{{site.domain}}/{{heroImagePreload}}">{{/if}}{{/if}}
 
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">{{{jsonLd}}}</script>
