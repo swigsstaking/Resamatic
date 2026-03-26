@@ -7,6 +7,7 @@ import useSiteStore from '../stores/siteStore';
 import { pagesApi, aiApi, buildApi, mediaApi, sitesApi } from '../services/api';
 import { trackSiteCreated, trackMediaUploaded, trackAIGeneration } from '../lib/posthog';
 import { mapAiContentToSections, distributeImagesToSections } from '../lib/aiPageBuilder';
+import { extractColorsFromImage } from '../lib/colorExtractor';
 import CreateProgressModal from '../components/CreateProgressModal';
 
 const STEPS = ['1. Entreprise & contact', '2. Design & couleurs', '3. Pages & mots-clés'];
@@ -29,6 +30,8 @@ export default function SiteCreatePage() {
 
   const [logoFile, setLogoFile] = useState(null); // { file: File, preview: string } | null
   const [faviconFile, setFaviconFile] = useState(null);
+  const [suggestedColors, setSuggestedColors] = useState(null); // { palette: string[], suggested: {...} } | null
+  const [extractingColors, setExtractingColors] = useState(false);
   const [images, setImages] = useState([]); // { file: File, preview: string }[]
 
   const onDropImages = useCallback((files) => {
@@ -490,6 +493,21 @@ export default function SiteCreatePage() {
                   </label>
                   <input value={form.design[path.split('.')[1]]} onChange={e => updateField(path, e.target.value)} className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono" />
                 </div>
+                {suggestedColors && (
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-[10px] text-gray-400">Logo :</span>
+                    {suggestedColors.palette.slice(0, 5).map((color, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => updateField(path, color)}
+                        className={`w-4 h-4 rounded-full border transition-all hover:scale-125 cursor-pointer ${form.design[path.split('.')[1]] === color ? 'border-accent ring-1 ring-accent/30 scale-110' : 'border-gray-300'}`}
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             <div>
@@ -516,8 +534,6 @@ export default function SiteCreatePage() {
               </button>
             </div>
           </div>
-          <p className="text-sm text-gray-400 mt-2">Le logo et favicon seront ajoutables dans les paramètres du site après création.</p>
-
           {/* Image import zone */}
           <div className="border-t pt-4 mt-4">
             <h3 className="text-sm font-semibold text-gray-600 mb-3">Images du site (optionnel)</h3>
@@ -556,7 +572,7 @@ export default function SiteCreatePage() {
               {logoFile ? (
                 <div className="relative w-full h-24 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
                   <img src={logoFile.preview} alt="Logo" className="max-h-full max-w-full object-contain p-2" />
-                  <button onClick={() => { URL.revokeObjectURL(logoFile.preview); setLogoFile(null); }} className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center">
+                  <button onClick={() => { URL.revokeObjectURL(logoFile.preview); setLogoFile(null); setSuggestedColors(null); }} className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center">
                     <X size={12} />
                   </button>
                 </div>
@@ -564,11 +580,42 @@ export default function SiteCreatePage() {
                 <label className="flex flex-col items-center justify-center w-full h-24 rounded-lg border-2 border-dashed border-gray-300 hover:border-accent cursor-pointer transition-colors bg-gray-50">
                   <Upload size={18} className="text-gray-400 mb-1" />
                   <span className="text-xs text-gray-400">Importer le logo</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                  <input type="file" accept="image/*" className="hidden" onChange={async e => {
                     const f = e.target.files?.[0];
-                    if (f) setLogoFile({ file: f, preview: URL.createObjectURL(f) });
+                    if (f) {
+                      setLogoFile({ file: f, preview: URL.createObjectURL(f) });
+                      setExtractingColors(true);
+                      try {
+                        const result = await extractColorsFromImage(f);
+                        if (result) setSuggestedColors(result);
+                      } catch (err) {
+                        console.warn('Color extraction failed:', err);
+                      } finally {
+                        setExtractingColors(false);
+                      }
+                    }
                   }} />
                 </label>
+              )}
+              {/* Color extraction suggestion */}
+              {extractingColors && (
+                <p className="text-xs text-gray-400 mt-1.5 animate-pulse">Analyse des couleurs...</p>
+              )}
+              {suggestedColors && logoFile && !extractingColors && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const { primaryColor, accentColor, backgroundColor, textColor } = suggestedColors.suggested;
+                    updateField('design.primaryColor', primaryColor);
+                    updateField('design.accentColor', accentColor);
+                    updateField('design.backgroundColor', backgroundColor);
+                    updateField('design.textColor', textColor);
+                    toast.success('Couleurs du logo appliquées');
+                  }}
+                  className="mt-1.5 text-xs font-medium text-accent hover:text-accent/80 underline underline-offset-2 transition-colors"
+                >
+                  Appliquer toutes les couleurs du logo
+                </button>
               )}
             </div>
             <div>
