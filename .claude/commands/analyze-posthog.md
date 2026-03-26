@@ -47,9 +47,9 @@ Analyse les données PostHog agrégées de tous les sites clients Resamatic pour
 ## API PostHog
 
 L'API PostHog est documentée sur https://posthog.com/docs/api.
-- Auth : Header `Authorization: Bearer phx_g3BQrck50JbpLCSUd3qW0SrpMt1qGUW4P2Jg1bjKo654MlU`
+- Auth : Header `Authorization: Bearer $POSTHOG_PERSONAL_API_KEY` (stored in server .env)
 - Base URL : `https://eu.posthog.com/api/`
-- Project API Key (ingestion) : `phc_xCKjDJ1VULRPbFCX0Qa1luNMDVBv60qVcoSY8N5KqI8`
+- Project API Key (ingestion) : stored in server .env as `POSTHOG_CLIENT_KEY`
 - Endpoints utiles :
   - `GET /api/projects/@current/insights/` — insights sauvegardés
   - `POST /api/projects/@current/query/` — HogQL queries
