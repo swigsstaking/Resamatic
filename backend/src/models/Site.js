@@ -70,10 +70,6 @@ const siteSchema = new mongoose.Schema({
     bgColor: String,
     logoColor: String,
   },
-  // Legacy (kept for backwards compat)
-  headerCtaText: { type: String, trim: true },
-  headerCtaUrl: { type: String, trim: true },
-
   // Footer config
   footer: {
     copyrightText: { type: String, trim: true },

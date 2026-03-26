@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import useSiteStore from '../stores/siteStore';
 import { pagesApi, aiApi, buildApi, mediaApi, sitesApi } from '../services/api';
 import { trackSiteCreated, trackMediaUploaded, trackAIGeneration } from '../lib/posthog';
+import { mapAiContentToSections, distributeImagesToSections } from '../lib/aiPageBuilder';
 import CreateProgressModal from '../components/CreateProgressModal';
 
 const STEPS = ['1. Entreprise & contact', '2. Design & couleurs', '3. Pages & mots-clés'];
@@ -234,116 +235,16 @@ export default function SiteCreatePage() {
             });
 
             // Map AI content to sections
-            const sections = created.page.sections.map(s => {
-              const sData = { ...s };
-              switch (s.type) {
-                case 'hero':
-                  if (content.hero) sData.data = { ...s.data, ...content.hero };
-                  break;
-                case 'text-highlight':
-                  if (content.textHighlight) sData.data = { ...s.data, ...content.textHighlight };
-                  break;
-                case 'description':
-                  if (content.description) sData.data = { ...s.data, ...content.description };
-                  break;
-                case 'why-us':
-                  if (content.whyUs) sData.data = { ...s.data, ...content.whyUs };
-                  break;
-                case 'google-reviews':
-                  if (content.googleReviews) {
-                    sData.data = { ...s.data, ...content.googleReviews };
-                    // Merge real Google reviews with AI-generated ones
-                    if (googleReviewsData?.reviews?.length) {
-                      const aiReviews = (sData.data.testimonials || []).map(t => ({ ...t, isGoogle: false }));
-                      sData.data.testimonials = [...aiReviews, ...googleReviewsData.reviews];
-                      sData.data.reviewCount = googleReviewsData.totalReviews;
-                      sData.data.rating = googleReviewsData.rating;
-                      sData.data.ctaText = `Voir nos ${googleReviewsData.totalReviews}+ avis`;
-                      sData.data.ctaUrl = googleReviewsData.googleMapsUri || site.business?.googleReviewUrl || '';
-                    } else {
-                      if (site.business?.googleReviewCount) sData.data.reviewCount = parseInt(site.business.googleReviewCount);
-                      if (site.business?.googleReviewRating) sData.data.rating = parseFloat(site.business.googleReviewRating);
-                      if (site.business?.googleReviewUrl) sData.data.ctaUrl = site.business.googleReviewUrl;
-                    }
-                  }
-                  break;
-                case 'cta-banner':
-                  if (content.ctaBanner) sData.data = { ...s.data, ...content.ctaBanner };
-                  break;
-                case 'services-grid':
-                  if (content.servicesGrid) sData.data = { ...s.data, ...content.servicesGrid };
-                  // Override services with actual pages (correct links), max 4 with rotation
-                  {
-                    const currentIdx = createdPages.indexOf(created);
-                    const otherPages = createdPages.filter((_, j) => j !== currentIdx);
-                    const aiServices = content.servicesGrid?.services || [];
-                    const allServices = otherPages.map((op) => {
-                      const name = op.conf.serviceFocus || op.conf.keyword || op.conf.title;
-                      const nameLower = name.toLowerCase();
-                      const aiMatch = aiServices.find(s => s.name && (nameLower.includes(s.name.toLowerCase()) || s.name.toLowerCase().includes(nameLower)));
-                      return {
-                        name,
-                        shortDescription: aiMatch?.shortDescription || aiMatch?.description || '',
-                        linkUrl: op.href,
-                      };
-                    });
-                    if (allServices.length <= 4) {
-                      sData.data.services = allServices;
-                    } else {
-                      // Rotate: offset by currentIdx so each page shows different 4
-                      const rotated = [...allServices.slice(currentIdx % allServices.length), ...allServices.slice(0, currentIdx % allServices.length)];
-                      sData.data.services = rotated.slice(0, 4);
-                    }
-                  }
-                  break;
-                case 'guarantee':
-                  if (content.guarantee) sData.data = { ...s.data, ...content.guarantee };
-                  break;
-                case 'testimonials':
-                  if (content.testimonials?.items) sData.data = { ...s.data, items: content.testimonials.items };
-                  else if (Array.isArray(content.testimonials)) sData.data = { ...s.data, items: content.testimonials };
-                  break;
-                case 'faq':
-                  if (content.faq?.items) sData.data = { ...s.data, items: content.faq.items };
-                  else if (Array.isArray(content.faq)) sData.data = { ...s.data, items: content.faq };
-                  break;
-                case 'team':
-                  if (content.team) sData.data = { ...s.data, ...content.team };
-                  break;
-                case 'map':
-                  if (content.map) sData.data = { ...s.data, ...content.map, address: s.data.address, phone: s.data.phone, email: s.data.email };
-                  break;
-              }
-              return sData;
+            const otherPages = createdPages.filter((_, j) => j !== createdPages.indexOf(created)).map(op => ({
+              title: op.conf.title, keyword: op.conf.keyword, serviceFocus: op.conf.serviceFocus, href: op.href,
+            }));
+            let sections = mapAiContentToSections(created.page.sections, content, {
+              otherPages,
+              currentPageIndex: createdPages.indexOf(created),
+              googleReviewsData,
+              siteBusiness: site.business,
             });
-
-            // Assign uploaded images to ALL image fields (cyclic distribution)
-            if (uploadedMediaIds.length > 0) {
-              const pageIdx = createdPages.indexOf(created);
-              const n = uploadedMediaIds.length;
-              let imgCursor = (pageIdx * 2) % n;
-              const nextImg = () => { const id = uploadedMediaIds[imgCursor % n]; imgCursor++; return id; };
-              for (const s of sections) {
-                if (s.type === 'hero' && !s.data.backgroundMediaId) {
-                  s.data.backgroundMediaId = nextImg();
-                }
-                if (s.type === 'description' && !s.data.imageMediaId) {
-                  s.data.imageMediaId = nextImg();
-                }
-                if (s.type === 'why-us' && !s.data.imageMediaId) {
-                  s.data.imageMediaId = nextImg();
-                }
-                if (s.type === 'team' && !s.data.imageMediaId) {
-                  s.data.imageMediaId = nextImg();
-                }
-                if (s.type === 'services-grid' && s.data.services) {
-                  s.data.services = s.data.services.map(svc => ({
-                    ...svc,
-                    imageMediaId: svc.imageMediaId || nextImg(),
-                  }));
-                }
-              }
-            }
+            sections = distributeImagesToSections(sections, uploadedMediaIds, createdPages.indexOf(created));
 
             await pagesApi.updateSections(created.page._id, sections);
 
@@ -356,21 +257,7 @@ export default function SiteCreatePage() {
           }
         } else if (uploadedMediaIds.length > 0) {
           // No AI but images uploaded — assign images to sections directly (cyclic)
-          const pageIdx = createdPages.indexOf(created);
-          const n = uploadedMediaIds.length;
-          let imgCursor = (pageIdx * 2) % n;
-          const nextImg = () => { const id = uploadedMediaIds[imgCursor % n]; imgCursor++; return id; };
-          const sections = created.page.sections.map(s => {
-            const sData = { ...s };
-            if (s.type === 'hero') sData.data = { ...s.data, backgroundMediaId: nextImg() };
-            if (s.type === 'description') sData.data = { ...s.data, imageMediaId: nextImg() };
-            if (s.type === 'why-us') sData.data = { ...s.data, imageMediaId: nextImg() };
-            if (s.type === 'team') sData.data = { ...s.data, imageMediaId: nextImg() };
-            if (s.type === 'services-grid' && s.data.services) {
-              sData.data = { ...s.data, services: s.data.services.map(svc => ({ ...svc, imageMediaId: nextImg() })) };
-            }
-            return sData;
-          });
+          const sections = distributeImagesToSections(created.page.sections, uploadedMediaIds, createdPages.indexOf(created));
           await pagesApi.updateSections(created.page._id, sections);
         }
       }
@@ -579,9 +466,6 @@ export default function SiteCreatePage() {
                 <input type="checkbox" checked={form.posthog.enabled} onChange={e => updateField('posthog.enabled', e.target.checked)} className="w-5 h-5 accent-accent" />
                 <span className="text-sm font-medium">Activer PostHog (analytics + cookie consent RGPD)</span>
               </label>
-              {form.posthog.enabled && (
-                <input value={form.posthog.apiKey} onChange={e => updateField('posthog.apiKey', e.target.value)} className="mt-2 w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-accent" placeholder="Clé API PostHog" />
-              )}
             </div>
           </div>
         </div>

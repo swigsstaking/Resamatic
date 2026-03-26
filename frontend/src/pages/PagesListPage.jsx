@@ -5,6 +5,7 @@ import { useIsAdmin } from '../stores/authStore';
 import toast from 'react-hot-toast';
 import { pagesApi, buildApi } from '../services/api';
 import PublishButton from '../components/PublishButton';
+import CreatePageModal from '../components/CreatePageModal';
 import useSiteStore from '../stores/siteStore';
 import { trackSitePreview, trackEvent } from '../lib/posthog';
 
@@ -15,7 +16,6 @@ export default function PagesListPage() {
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [newPage, setNewPage] = useState({ title: '', type: 'homepage' });
 
   const fetchPages = async () => {
     try {
@@ -25,17 +25,6 @@ export default function PagesListPage() {
   };
 
   useEffect(() => { fetchPages(); }, [siteId]);
-
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    try {
-      await pagesApi.create(siteId, newPage);
-      toast.success('Page créée');
-      setShowCreate(false);
-      setNewPage({ title: '', type: 'homepage' });
-      fetchPages();
-    } catch { toast.error('Erreur'); }
-  };
 
   const handleDelete = async (id, title) => {
     if (!confirm(`Supprimer "${title}" ?`)) return;
@@ -80,32 +69,21 @@ export default function PagesListPage() {
             <Link2 size={16} /> Copier le lien
           </button>
           {isAdmin && <PublishButton siteId={siteId} status={currentSite?.status} domain={currentSite?.domain} />}
-          {isAdmin && (
-            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 text-sm bg-accent text-primary rounded-lg hover:opacity-90">
-              <Plus size={16} /> Nouvelle page
-            </button>
-          )}
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 text-sm bg-accent text-primary rounded-lg hover:opacity-90">
+            <Plus size={16} /> Nouvelle page
+          </button>
         </div>
       </div>
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="bg-white p-4 rounded-lg border mb-6 flex gap-3 items-end">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
-            <input value={newPage.title} onChange={e => setNewPage(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 border rounded-lg text-sm" required />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-            <select value={newPage.type} onChange={e => setNewPage(p => ({ ...p, type: e.target.value }))} className="px-3 py-2 border rounded-lg text-sm">
-              <option value="homepage">Page d'accueil</option>
-              <option value="subpage">Sous-page</option>
-              <option value="contact">Page contact</option>
-              <option value="legal">Page légale</option>
-            </select>
-          </div>
-          <button type="submit" className="px-4 py-2 bg-accent text-primary rounded-lg text-sm">Créer</button>
-          <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-gray-500 text-sm">Annuler</button>
-        </form>
+        <CreatePageModal
+          siteId={siteId}
+          site={currentSite}
+          isAdmin={isAdmin}
+          existingPages={pages}
+          onCreated={() => { setShowCreate(false); fetchPages(); }}
+          onClose={() => setShowCreate(false)}
+        />
       )}
 
       {loading ? (

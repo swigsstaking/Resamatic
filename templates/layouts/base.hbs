@@ -61,15 +61,50 @@
   {{> footer}}
 
   {{#ifEnabled site.posthog.enabled}}
-  {{> cookie-consent}}
   <script>
     window.__posthogKey = '{{site.posthog.apiKey}}';
     window.__posthogHost = '{{site.posthog.apiHost}}';
     function initPosthog() {
       !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys onFeatureFlags onSessionId setPersonProperties".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
       posthog.init(window.__posthogKey, {api_host: window.__posthogHost, persistence: 'localStorage'});
+
+      // Track section visibility (scroll depth per section)
+      var tracked = {};
+      var sIdx = 0;
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          var key = entry.target.dataset.section + '-' + entry.target.dataset.idx;
+          if (entry.isIntersecting && !tracked[key]) {
+            tracked[key] = true;
+            posthog.capture('section_viewed', {
+              section_type: entry.target.dataset.section,
+              section_index: parseInt(entry.target.dataset.idx),
+              page: window.location.pathname
+            });
+          }
+        });
+      }, { threshold: 0.3 });
+      document.querySelectorAll('section[data-section]').forEach(function(s) {
+        s.dataset.idx = sIdx++;
+        observer.observe(s);
+      });
+
+      // Track CTA clicks
+      document.addEventListener('click', function(e) {
+        var btn = e.target.closest('a.cta-button, a.btn, button.cta-button, button.btn, .cta-banner a, .hero a.btn');
+        if (btn) {
+          var sec = btn.closest('section[data-section]');
+          posthog.capture('cta_clicked', {
+            text: btn.textContent.trim().substring(0, 80),
+            href: btn.href || '',
+            section_type: sec ? sec.dataset.section : '',
+            page: window.location.pathname
+          });
+        }
+      });
     }
   </script>
+  {{> cookie-consent}}
   {{/ifEnabled}}
 
   <!-- Inline edit bridge (for admin preview) -->

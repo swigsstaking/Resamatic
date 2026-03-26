@@ -15,7 +15,7 @@ export function initPostHog() {
     capture_pageview: false,
     capture_pageleave: true,
     persistence: 'localStorage',
-    session_recording: { maskAllInputs: false },
+    session_recording: { maskAllInputs: true },
     loaded: (ph) => {
       ph.register({ app: APP_NAME });
     },

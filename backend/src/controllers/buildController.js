@@ -46,10 +46,16 @@ export const servePreview = async (req, res, next) => {
     const buildDir = path.resolve(process.env.BUILD_OUTPUT_DIR || './builds', site.slug);
     const filePath = req.params[0] || 'index.html';
 
+    // Prevent path traversal
+    const resolved = path.resolve(buildDir, filePath);
+    if (!resolved.startsWith(buildDir)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     // For HTML files, inline CSS and set base URL to prevent HTTPS upgrade issues
     if (filePath.endsWith('.html')) {
       try {
-        let html = await fs.readFile(path.join(buildDir, filePath), 'utf-8');
+        let html = await fs.readFile(resolved, 'utf-8');
         const baseUrl = `${req.protocol}://${req.get('host')}/api/build/${req.params.siteId}/preview/`;
         html = html.replace('<head>', `<head>\n  <base href="${baseUrl}">`);
 

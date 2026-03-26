@@ -2,8 +2,14 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import Site from '../models/Site.js';
+import { recordFirstDeployment } from './billing.service.js';
 
 const execAsync = promisify(exec);
+
+const DOMAIN_REGEX = /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/;
+function validateDomain(domain) {
+  if (!domain || !DOMAIN_REGEX.test(domain)) throw new Error(`Invalid domain: ${domain}`);
+}
 
 function getConfig() {
   const host = process.env.DEPLOY_HOST || '192.168.110.74';
@@ -16,14 +22,16 @@ function getConfig() {
 function runCmd(cmd) {
   const { isLocal, user, host } = getConfig();
   if (isLocal) return execAsync(cmd);
-  return execAsync(`ssh -o StrictHostKeyChecking=no ${user}@${host} "${cmd}"`);
+  return execAsync(`ssh ${user}@${host} "${cmd}"`);
 }
 
 function runSudo(cmd, opts = {}) {
   const { isLocal, user, host } = getConfig();
+  const sudoPass = process.env.DEPLOY_SUDO_PASS;
+  if (!sudoPass) throw new Error('DEPLOY_SUDO_PASS not configured');
   const execOpts = { timeout: opts.timeout || 60000 };
-  if (isLocal) return execAsync(`echo 'AagD2jCusi' | sudo -S bash -c '${cmd}'`, execOpts);
-  return execAsync(`ssh -o StrictHostKeyChecking=no ${user}@${host} "echo 'AagD2jCusi' | sudo -S bash -c '${cmd}'"`, execOpts);
+  if (isLocal) return execAsync(`echo '${sudoPass}' | sudo -S bash -c '${cmd}'`, execOpts);
+  return execAsync(`ssh ${user}@${host} "echo '${sudoPass}' | sudo -S bash -c '${cmd}'"`, execOpts);
 }
 
 function generateNginxConfig(domain) {
@@ -67,6 +75,7 @@ export async function deploySite(siteId) {
   const site = await Site.findById(siteId);
   if (!site) throw new Error('Site not found');
   if (!site.domain) throw new Error('Site domain not configured');
+  validateDomain(site.domain);
 
   const { isLocal, user, host, sitesDir } = getConfig();
   const buildDir = path.resolve(process.env.BUILD_OUTPUT_DIR || './builds', site.slug);
@@ -82,7 +91,7 @@ export async function deploySite(siteId) {
       await execAsync(`rsync -a --delete ${buildDir}/ ${remoteDir}/`);
     } else {
       await execAsync(
-        `rsync -azP --delete -e "ssh -o StrictHostKeyChecking=no" ${buildDir}/ ${user}@${host}:${remoteDir}/`
+        `rsync -azP --delete -e "ssh " ${buildDir}/ ${user}@${host}:${remoteDir}/`
       );
     }
 
@@ -140,7 +149,10 @@ export async function deploySite(siteId) {
       // Don't fail the whole deploy, but log it
     }
 
-    // 6. Update site status
+    // 6. Track first deployment for billing
+    const isFirstDeploy = !site.lastPublishedAt;
+
+    // 7. Update site status
     await Site.findByIdAndUpdate(siteId, {
       status: 'published',
       lastPublishedAt: new Date(),
@@ -148,6 +160,10 @@ export async function deploySite(siteId) {
       deployStep: null,
       deployProgress: 100,
     });
+
+    if (isFirstDeploy) {
+      await recordFirstDeployment(site);
+    }
 
     return { success: true, url: `https://${site.domain}` };
   } catch (err) {

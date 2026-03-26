@@ -4,6 +4,7 @@ import Media from '../models/Media.js';
 import slugify from 'slugify';
 import { getGoogleReviews } from '../services/google-reviews.service.js';
 import { cleanupSiteFiles } from '../services/deploy.service.js';
+import { markSiteDeleted } from '../services/billing.service.js';
 
 export const list = async (req, res, next) => {
   try {
@@ -68,6 +69,8 @@ export const remove = async (req, res, next) => {
     // Cascade delete pages and media
     await Page.deleteMany({ siteId: site._id });
     await Media.deleteMany({ siteId: site._id });
+    // Mark deployment as deleted for billing
+    await markSiteDeleted(site._id);
     // Cleanup server files, nginx config, local build
     const cleaned = await cleanupSiteFiles(site);
     res.json({ message: 'Site deleted', cleaned });

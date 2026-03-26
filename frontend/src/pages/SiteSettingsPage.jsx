@@ -317,12 +317,6 @@ export default function SiteSettingsPage() {
             <input type="checkbox" checked={form.posthog?.enabled || false} onChange={e => u('posthog.enabled', e.target.checked)} className="w-5 h-5 accent-accent" />
             <span className="text-sm font-medium">Activer PostHog + bandeau cookies RGPD</span>
           </label>
-          {form.posthog?.enabled && (
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Clé API" value={form.posthog?.apiKey || ''} onChange={v => u('posthog.apiKey', v)} />
-              <Field label="Host" value={form.posthog?.apiHost || 'https://eu.i.posthog.com'} onChange={v => u('posthog.apiHost', v)} />
-            </div>
-          )}
         </section>
       </div>
     </div>

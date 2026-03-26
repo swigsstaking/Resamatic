@@ -12,7 +12,7 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
 
 // Cache compiled templates
 let templatesCompiled = false;
-let baseTemplate, headerPartial, footerPartial, cookieConsentPartial;
+let baseTemplate;
 const sectionTemplates = {};
 
 async function loadTemplates() {
@@ -232,6 +232,12 @@ export async function buildSite(siteId) {
     .populate('design.faviconMediaId')
     .lean();
   if (!site) throw new Error('Site not found');
+
+  // Inject default PostHog client key if enabled but no custom key
+  if (site.posthog?.enabled && !site.posthog.apiKey) {
+    site.posthog.apiKey = process.env.POSTHOG_CLIENT_KEY || '';
+    site.posthog.apiHost = site.posthog.apiHost || process.env.POSTHOG_CLIENT_HOST || 'https://eu.i.posthog.com';
+  }
 
   const pages = await Page.find({ siteId }).sort({ sortOrder: 1 }).lean();
   const allMedia = await Media.find({ siteId }).lean();

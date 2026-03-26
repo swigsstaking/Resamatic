@@ -80,6 +80,11 @@ export const aiApi = {
   generateAlt: (data) => api.post('/ai/generate-alt', data),
 };
 
+export const adminApi = {
+  getBilling: (month, year) => api.get('/admin/billing', { params: { month, year } }),
+  sendBillingReport: (month, year) => api.post('/admin/billing-report', { month, year }),
+};
+
 export const usersApi = {
   getAll: () => api.get('/users'),
   getOne: (id) => api.get(`/users/${id}`),

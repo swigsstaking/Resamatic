@@ -17,7 +17,9 @@ import buildRoutes from './src/routes/build.js';
 import deployRoutes from './src/routes/deploy.js';
 import aiRoutes from './src/routes/ai.js';
 import usersRoutes from './src/routes/users.js';
+import adminRoutes from './src/routes/admin.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
+import { startBillingCron } from './src/cron/billing-cron.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -50,10 +52,20 @@ app.use('/api/', rateLimit({
   legacyHeaders: false,
 }));
 
+// Strict rate limit on login
+app.use('/api/auth/login', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de tentatives, réessayez dans 15 minutes' },
+}));
+
 // CORS
 const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+if (!corsOrigins.length) console.warn('[security] CORS_ORIGINS not set — defaulting to same-origin only');
 app.use(cors({
-  origin: corsOrigins.length ? corsOrigins : true,
+  origin: corsOrigins.length ? corsOrigins : false,
   credentials: true,
 }));
 
@@ -73,6 +85,7 @@ app.use('/api/build', buildRoutes);
 app.use('/api/deploy', deployRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -92,6 +105,7 @@ app.use(errorHandler);
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('MongoDB connected');
+    startBillingCron();
     app.listen(PORT, () => console.log(`Resamatic API running on port ${PORT}`));
   })
   .catch(err => {

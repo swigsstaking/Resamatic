@@ -125,7 +125,10 @@ export const update = async (req, res, next) => {
     if (req.user.role === 'client' && !req.user.assignedSites.some(id => id.toString() === page.siteId.toString())) {
       return res.status(403).json({ error: 'Access denied' });
     }
-    Object.assign(page, req.body);
+    const allowed = ['title', 'slug', 'type', 'sortOrder', 'isMainHomepage', 'seo', 'sections', 'visible'];
+    for (const key of Object.keys(req.body)) {
+      if (allowed.includes(key)) page[key] = req.body[key];
+    }
     await page.save();
     res.json({ page });
   } catch (err) { next(err); }
