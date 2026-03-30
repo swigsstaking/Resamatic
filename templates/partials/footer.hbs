@@ -1,8 +1,8 @@
 <footer class="site-footer" data-section="footer">
   <div class="container footer-inner">
     <div class="footer-col">
-      {{#if site.design.logoMediaId}}
-        <img src="images/{{site.design.logoMediaId.filename}}" alt="{{site.business.name}}" class="footer-logo" width="150" height="50" loading="lazy">
+      {{#if logoUrl}}
+        <img src="{{logoUrl}}" alt="{{site.business.name}}" class="footer-logo" width="150" height="50" loading="lazy">
       {{else}}
         <span class="footer-logo-text">{{site.business.name}}</span>
       {{/if}}

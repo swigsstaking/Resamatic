@@ -2,6 +2,7 @@ import Handlebars from 'handlebars';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import sharp from 'sharp';
 import Site from '../models/Site.js';
 import Page from '../models/Page.js';
 import Media from '../models/Media.js';
@@ -297,6 +298,16 @@ export async function buildSite(siteId) {
     }
   }
 
+  // Compute optimized logo URL (use smallest WebP variant for header display)
+  let logoUrl = '';
+  const logoMedia = site.design?.logoMediaId;
+  if (logoMedia) {
+    const logoVariant = logoMedia.variants?.find(v => v.suffix === '-400w') || logoMedia.variants?.[0];
+    logoUrl = logoVariant
+      ? `images/${path.basename(logoVariant.storagePath)}`
+      : `images/${logoMedia.filename}`;
+  }
+
   // Build each page
   for (const page of pages) {
     const jsonLd = [generateJsonLd(site, page)];
@@ -425,6 +436,7 @@ export async function buildSite(siteId) {
       buildTimestamp: Date.now(),
       heroImagePreload,
       heroImageSrcset,
+      logoUrl,
     });
 
     const filename = page.isMainHomepage ? 'index.html' : `${page.slug}.html`;
