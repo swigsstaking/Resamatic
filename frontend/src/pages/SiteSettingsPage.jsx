@@ -114,7 +114,10 @@ export default function SiteSettingsPage() {
       const clone = JSON.parse(JSON.stringify(prev));
       const keys = path.split('.');
       let obj = clone;
-      for (let i = 0; i < keys.length - 1; i++) obj = obj[keys[i]];
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (obj[keys[i]] == null) obj[keys[i]] = {};
+        obj = obj[keys[i]];
+      }
       obj[keys[keys.length - 1]] = value;
       return clone;
     });
@@ -317,6 +320,11 @@ export default function SiteSettingsPage() {
             <input type="checkbox" checked={form.posthog?.enabled || false} onChange={e => u('posthog.enabled', e.target.checked)} className="w-5 h-5 accent-accent" />
             <span className="text-sm font-medium">Activer PostHog + bandeau cookies RGPD</span>
           </label>
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">Code de tracking (header)</label>
+            <textarea value={form.tracking?.headerCode || ''} onChange={e => u('tracking.headerCode', e.target.value)} placeholder="Collez ici votre code Google Analytics, Meta Pixel, etc." rows={4} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm font-mono outline-none focus:ring-2 focus:ring-accent" />
+            <p className="text-xs text-gray-400 mt-1">Ce code sera injecté dans le &lt;head&gt; de toutes les pages du site.</p>
+          </div>
         </section>
       </div>
     </div>

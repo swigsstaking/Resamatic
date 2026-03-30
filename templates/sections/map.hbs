@@ -7,7 +7,8 @@
         {{#if ../logoUrl}}
           <img src="{{../logoUrl}}" alt="Logo" class="map-logo">
         {{/if}}
-        {{#if address}}<p class="map-address" data-editable="address">{{address}}</p>{{/if}}
+        {{#if businessName}}<p class="map-business-name">{{businessName}}</p>{{/if}}
+        {{#if address}}<p class="map-address" data-editable="address">{{address}}{{#if zip}}, {{zip}}{{/if}}{{#if city}} {{city}}{{/if}}</p>{{/if}}
         {{#if hours}}<p class="map-hours" data-editable="hours">{{hours}}</p>{{/if}}
         {{#if phone}}<p class="map-contact"><a href="tel:{{phone}}">{{phone}}</a></p>{{/if}}
         {{#if email}}<p class="map-contact"><a href="mailto:{{email}}">{{email}}</a></p>{{/if}}

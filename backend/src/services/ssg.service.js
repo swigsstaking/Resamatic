@@ -313,16 +313,23 @@ export async function buildSite(siteId) {
           };
         }
         if (section.type === 'map') {
-          const mapAddress = sectionData.address || site.business?.address || '';
-          const mapCity = site.business?.city || '';
-          const mapZip = site.business?.zip || '';
+          const biz = site.business || {};
+          const mapAddress = sectionData.address || biz.address || '';
+          const mapCity = biz.city || '';
+          const mapZip = biz.zip || '';
           sectionData = {
             ...sectionData,
+            businessName: biz.name || '',
             address: mapAddress,
-            phone: sectionData.phone || site.business?.phone || '',
-            email: sectionData.email || site.business?.email || '',
+            city: mapCity,
+            zip: mapZip,
+            phone: sectionData.phone || biz.phone || '',
+            email: sectionData.email || biz.email || '',
           };
-          if (!sectionData.embedUrl && mapAddress) {
+          // Embed with business name for richer display (fiche with stars, reviews)
+          if (biz.name && mapCity) {
+            sectionData.embedUrl = `https://www.google.com/maps?q=${encodeURIComponent(biz.name + ' ' + mapCity)}&output=embed`;
+          } else if (!sectionData.embedUrl && mapAddress) {
             const parts = [mapAddress, mapZip, mapCity].filter(Boolean);
             sectionData.embedUrl = `https://www.google.com/maps?q=${encodeURIComponent(parts.join(' '))}&output=embed`;
           }

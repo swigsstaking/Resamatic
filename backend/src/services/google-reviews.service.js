@@ -46,6 +46,7 @@ export async function resolvePlaceId(site) {
  */
 export async function fetchReviews(placeId) {
   const res = await axios.get(`${PLACES_BASE}/places/${placeId}`, {
+    params: { languageCode: 'fr' },
     headers: {
       'X-Goog-Api-Key': API_KEY,
       'X-Goog-FieldMask': 'reviews,rating,userRatingCount,googleMapsUri',

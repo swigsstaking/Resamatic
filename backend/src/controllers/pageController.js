@@ -67,6 +67,7 @@ export const create = async (req, res, next) => {
     if (site && data.sections) {
       const biz = site.business || {};
       const pageTitle = data.title || '';
+      const keyword = data.keyword || '';
       const cityStr = biz.city ? ` à ${biz.city}` : '';
 
       for (const section of data.sections) {
@@ -81,7 +82,7 @@ export const create = async (req, res, next) => {
               section.data.ctaText = biz.phone ? `Appelez le ${phoneDisplay}` : (biz.email ? `Envoyer un email` : '');
               section.data.ctaUrl = biz.phone ? `tel:${biz.phone}` : (biz.email ? `mailto:${biz.email}` : '');
             } else {
-              section.data.headline = pageTitle + cityStr;
+              section.data.headline = keyword || (pageTitle + cityStr);
               section.data.subheadline = biz.activity ? `Votre spécialiste ${biz.activity.toLowerCase()}${cityStr}` : '';
               section.data.ctaText = biz.phone ? `Contactez-nous au ${biz.phone.replace(/(\d{2})(?=\d)/g, '$1 ')}` : 'Contactez-nous';
               section.data.ctaUrl = 'contact.html';

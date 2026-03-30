@@ -110,15 +110,16 @@
 }
 
 /* ===== TEXT HIGHLIGHT ===== */
-.section-text-highlight { padding: 2.5rem 0; }
+.section-text-highlight { padding: 3.5rem 0; background: var(--color-primary); }
 .text-highlight-content {
   max-width: 800px;
   margin: 0 auto;
   text-align: center;
   font-size: 1.05rem;
   line-height: 1.8;
-  color: inherit;
+  color: #fff;
 }
+.text-highlight-content strong { color: #fff; }
 
 /* ===== HERO (2-column layout like precision-institut.fr) ===== */
 .section-hero {
@@ -786,6 +787,13 @@
   width: auto;
   margin-bottom: 1.5rem;
   display: block;
+}
+.map-business-name {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 0.5rem;
 }
 .map-address {
   font-size: 1rem;

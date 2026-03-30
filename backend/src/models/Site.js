@@ -54,6 +54,11 @@ const siteSchema = new mongoose.Schema({
     apiHost: { type: String, default: 'https://eu.i.posthog.com' },
   },
 
+  // Tracking / third-party scripts
+  tracking: {
+    headerCode: { type: String, default: '' },
+  },
+
   // SEO defaults
   seoDefaults: {
     titleSuffix: String,

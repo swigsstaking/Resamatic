@@ -50,6 +50,8 @@
 
   <!-- Main CSS -->
   <link rel="stylesheet" href="main.css?v={{buildTimestamp}}">
+
+  {{#if site.tracking.headerCode}}{{{site.tracking.headerCode}}}{{/if}}
 </head>
 <body>
   {{> header}}

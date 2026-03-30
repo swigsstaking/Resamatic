@@ -200,6 +200,7 @@ export default function SiteCreatePage() {
       for (const pageConf of form.pages) {
         const page = await pagesApi.create(site._id, {
           title: pageConf.title || pageConf.keyword,
+          keyword: pageConf.keyword || '',
           type: pageConf.isMain ? 'homepage' : 'subpage',
           isMainHomepage: pageConf.isMain,
         });
@@ -248,6 +249,12 @@ export default function SiteCreatePage() {
               siteBusiness: site.business,
             });
             sections = distributeImagesToSections(sections, uploadedMediaIds, createdPages.indexOf(created));
+
+            // Force keyword as H1 headline (exact text)
+            if (pageConf.keyword) {
+              const hero = sections.find(s => s.type === 'hero');
+              if (hero) hero.data.headline = pageConf.keyword;
+            }
 
             await pagesApi.updateSections(created.page._id, sections);
 

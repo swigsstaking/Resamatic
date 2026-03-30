@@ -92,6 +92,32 @@ export const fetchGoogleReviews = async (req, res, next) => {
     site.markModified('business');
     await site.save();
 
+    // Inject Google reviews into all pages' google-reviews sections
+    if (result.reviews?.length) {
+      const pages = await Page.find({ siteId: site._id });
+      for (const page of pages) {
+        let modified = false;
+        for (const section of page.sections) {
+          if (section.type === 'google-reviews') {
+            const existing = section.data?.testimonials || [];
+            // Keep AI reviews, replace Google reviews
+            const aiReviews = existing.filter(t => !t.isGoogle);
+            const googleReviews = result.reviews.map(r => ({ ...r, isGoogle: true }));
+            section.data.testimonials = [...aiReviews, ...googleReviews];
+            section.data.reviewCount = result.totalReviews;
+            section.data.rating = result.rating;
+            section.data.ctaUrl = result.googleMapsUri || site.business.googleReviewUrl || '';
+            section.data.ctaText = `Voir nos ${result.totalReviews}+ avis`;
+            modified = true;
+          }
+        }
+        if (modified) {
+          page.markModified('sections');
+          await page.save();
+        }
+      }
+    }
+
     res.json({
       reviews: result.reviews,
       rating: result.rating,

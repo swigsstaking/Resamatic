@@ -41,7 +41,7 @@ export default function CreatePageModal({ siteId, site, isAdmin, existingPages, 
     try {
       for (const p of pageList) {
         if (!p.title.trim()) continue;
-        await pagesApi.create(siteId, { title: p.title, type: p.type });
+        await pagesApi.create(siteId, { title: p.title, keyword: p.keyword || '', type: p.type });
       }
       toast.success(pageList.length > 1 ? `${pageList.length} pages créées` : 'Page créée');
       onCreated();
@@ -61,7 +61,7 @@ export default function CreatePageModal({ siteId, site, isAdmin, existingPages, 
       const createdPages = [];
       for (const p of pageList) {
         if (!p.title.trim()) continue;
-        const result = await pagesApi.create(siteId, { title: p.title, type: p.type });
+        const result = await pagesApi.create(siteId, { title: p.title, keyword: p.keyword || '', type: p.type });
         createdPages.push({ conf: p, page: result.page });
       }
 
@@ -108,6 +108,12 @@ export default function CreatePageModal({ siteId, site, isAdmin, existingPages, 
             siteBusiness: site?.business,
           });
           sections = distributeImagesToSections(sections, allMediaIds, existingPages.length + i);
+
+          // Force keyword as H1 headline (exact text)
+          if (conf.keyword) {
+            const hero = sections.find(s => s.type === 'hero');
+            if (hero) hero.data.headline = conf.keyword;
+          }
 
           await pagesApi.updateSections(page._id, sections);
           if (content.seo) await pagesApi.update(page._id, { seo: content.seo });
