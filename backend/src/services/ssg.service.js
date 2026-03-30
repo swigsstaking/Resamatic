@@ -16,7 +16,7 @@ let baseTemplate;
 const sectionTemplates = {};
 
 async function loadTemplates() {
-  if (templatesCompiled) return;
+  // Always reload templates to ensure latest versions across PM2 cluster workers
 
   const base = await fs.readFile(path.join(TEMPLATES_DIR, 'layouts/base.hbs'), 'utf-8');
   baseTemplate = Handlebars.compile(base);
