@@ -22,12 +22,13 @@
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">{{{jsonLd}}}</script>
 
-  {{#if heroImagePreload}}<link rel="preload" as="image" href="{{heroImagePreload}}" type="image/webp">{{/if}}
+  {{#if heroImagePreload}}<link rel="preload" as="image" href="{{heroImagePreload}}" type="image/webp"{{#if heroImageSrcset}} imagesrcset="{{heroImageSrcset}}" imagesizes="(max-width: 768px) 100vw, 50vw"{{/if}}>{{/if}}
 
-  <!-- Fonts -->
+  <!-- Fonts (non-render-blocking) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family={{encodeURI site.design.fontHeading}}:wght@400;700&family={{encodeURI site.design.fontBody}}:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family={{encodeURI site.design.fontHeading}}:wght@400;700&family={{encodeURI site.design.fontBody}}:wght@300;400;500;600&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family={{encodeURI site.design.fontHeading}}:wght@400;700&family={{encodeURI site.design.fontBody}}:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 
   <!-- Favicon -->
   {{#if site.design.faviconMediaId}}
@@ -48,8 +49,9 @@
     .container{max-width:1200px;margin:0 auto;padding:0 1.5rem}
   </style>
 
-  <!-- Main CSS -->
-  <link rel="stylesheet" href="main.css?v={{buildTimestamp}}">
+  <!-- Main CSS (non-render-blocking) -->
+  <link rel="preload" href="main.css?v={{buildTimestamp}}" as="style">
+  <link rel="stylesheet" href="main.css?v={{buildTimestamp}}" media="print" onload="this.media='all'">
 
   {{#if site.tracking.headerCode}}{{{site.tracking.headerCode}}}{{/if}}
 </head>

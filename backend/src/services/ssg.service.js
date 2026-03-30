@@ -253,6 +253,15 @@ export async function buildSite(siteId) {
   const imagesDir = path.join(buildDir, 'images');
   await fs.mkdir(imagesDir, { recursive: true });
 
+  // Clean stale HTML files from previous builds (deleted pages)
+  try {
+    const existing = await fs.readdir(buildDir);
+    for (const f of existing) {
+      if (f.endsWith('.html')) await fs.unlink(path.join(buildDir, f));
+    }
+  } catch {}
+
+
   // Copy CSS
   try {
     const mainCss = await fs.readFile(path.join(TEMPLATES_DIR, 'assets/main.css'), 'utf-8');
@@ -376,14 +385,21 @@ export async function buildSite(siteId) {
       }
     }
 
-    // Extract hero image URL for preload hint
+    // Extract hero image URL for preload hint (with srcset for responsive preloading)
     const heroSection = page.sections.find(s => s.type === 'hero' && s.visible);
     let heroImagePreload = '';
+    let heroImageSrcset = '';
     if (heroSection?.data?.backgroundMediaId) {
       const heroMedia = mediaMap[heroSection.data.backgroundMediaId.toString()];
       if (heroMedia) {
         const best = heroMedia.variants?.find(v => v.suffix === '800w') || heroMedia.variants?.[0];
         if (best) heroImagePreload = `images/${best.storagePath.split('/').pop()}`;
+        // Build srcset for responsive preload
+        if (heroMedia.variants?.length) {
+          heroImageSrcset = heroMedia.variants
+            .map(v => `images/${v.storagePath.split('/').pop()} ${v.width}w`)
+            .join(', ');
+        }
       }
     }
 
@@ -408,6 +424,7 @@ export async function buildSite(siteId) {
       showLegalLinks: site.footer?.showLegalLinks !== false,
       buildTimestamp: Date.now(),
       heroImagePreload,
+      heroImageSrcset,
     });
 
     const filename = page.isMainHomepage ? 'index.html' : `${page.slug}.html`;
@@ -441,10 +458,11 @@ function resolveMediaInData(data, mediaMap) {
       const media = mediaMap[resolved[key].toString()];
       if (media) {
         const urlKey = key.replace('MediaId', 'Url');
-        const bestVariant = media.variants?.length
-          ? media.variants[media.variants.length - 1]
-          : null;
-        resolved[urlKey] = `images/${path.basename(bestVariant?.storagePath || media.storagePath)}`;
+        // Use middle variant (800w) as src fallback — srcset handles responsive selection
+        const midVariant = media.variants?.find(v => v.suffix === '800w')
+          || media.variants?.[Math.floor((media.variants?.length || 1) / 2)]
+          || media.variants?.[media.variants.length - 1];
+        resolved[urlKey] = `images/${path.basename(midVariant?.storagePath || media.storagePath)}`;
         resolved[key + '_srcset'] = media.variants?.map(v =>
           `images/${path.basename(v.storagePath)} ${v.width}w`
         ).join(', ');

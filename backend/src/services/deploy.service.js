@@ -41,6 +41,7 @@ function generateNginxConfig(domain) {
     server_name ${domain} www.${domain};
     root ${sitesDir}/${domain};
     index index.html;
+    charset utf-8;
 
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -141,6 +142,15 @@ export async function deploySite(siteId) {
           { timeout: 120000 }
         );
         console.log('[deploy] Certbot output:', stdout || stderr);
+
+        // Enable HTTP/2 after Certbot configures SSL
+        try {
+          await runSudo(`sed -i 's/listen 443 ssl;/listen 443 ssl http2;/g' ${configPath}`);
+          await runSudo('nginx -t && systemctl reload nginx');
+          console.log('[deploy] HTTP/2 enabled for', site.domain);
+        } catch (h2Err) {
+          console.warn('[deploy] HTTP/2 setup failed:', h2Err.message);
+        }
       } else {
         console.log('[deploy] SSL cert and nginx config already OK, skipping');
       }
