@@ -33,6 +33,7 @@ async function loadTemplates() {
     'hero', 'description', 'why-us', 'google-reviews', 'cta-banner',
     'services-grid', 'guarantee', 'testimonials',
     'faq', 'team', 'map', 'text-highlight',
+    'city-about', 'city-guarantee', 'city-reviews',
   ];
   for (const type of sectionTypes) {
     try {
@@ -158,7 +159,7 @@ function generateSitemapXml(domain, pages) {
   const now = new Date().toISOString().split('T')[0];
   const urls = pages.map(page => {
     const loc = page.isMainHomepage ? '' : `${page.slug}.html`;
-    const priority = page.isMainHomepage ? '1.0' : page.type === 'homepage' ? '0.8' : '0.5';
+    const priority = page.isMainHomepage ? '1.0' : page.type === 'homepage' ? '0.8' : page.type === 'city' ? '0.6' : '0.5';
     return `  <url>
     <loc>https://${domain}/${loc}</loc>
     <lastmod>${now}</lastmod>
@@ -310,6 +311,21 @@ export async function buildSite(siteId) {
             rating: sectionData.rating || site.business?.googleReviewRating || 5,
             aiReviews: allTestimonials.filter(t => !t.isGoogle).slice(0, 2),
             googleReviews: allTestimonials.filter(t => t.isGoogle),
+          };
+        }
+        if (section.type === 'city-about') {
+          const biz = site.business || {};
+          if (biz.name && biz.city) {
+            sectionData.mapEmbedUrl = `https://www.google.com/maps?q=${encodeURIComponent(biz.name + ' ' + biz.city)}&output=embed`;
+          }
+        }
+        if (section.type === 'city-reviews') {
+          const allTestimonials = sectionData.testimonials || [];
+          sectionData = {
+            ...sectionData,
+            reviewCount: sectionData.reviewCount || site.business?.googleReviewCount || 0,
+            rating: sectionData.rating || site.business?.googleReviewRating || 5,
+            testimonials: allTestimonials.filter(t => t.isGoogle).slice(0, 3),
           };
         }
         if (section.type === 'map') {

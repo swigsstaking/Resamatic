@@ -94,6 +94,32 @@ export function mapAiContentToSections(sections, content, options = {}) {
 }
 
 /**
+ * Map AI-generated city page content to sections.
+ * Only maps hero, city-about, cta-banner, city-guarantee.
+ * services-grid, google-reviews, and map are pre-populated from real site data.
+ */
+export function mapCityAiContentToSections(sections, content) {
+  return sections.map(s => {
+    const sData = { ...s };
+    switch (s.type) {
+      case 'hero':
+        if (content.hero) sData.data = { ...s.data, ...content.hero };
+        break;
+      case 'city-about':
+        if (content.cityAbout) sData.data = { ...s.data, ...content.cityAbout };
+        break;
+      case 'cta-banner':
+        if (content.ctaBanner) sData.data = { ...s.data, ...content.ctaBanner };
+        break;
+      case 'city-guarantee':
+        if (content.cityGuarantee) sData.data = { ...s.data, ...content.cityGuarantee };
+        break;
+    }
+    return sData;
+  });
+}
+
+/**
  * Distribute images cyclically across sections.
  * @param {Array} sections - Page sections
  * @param {Array} mediaIds - Array of media ObjectId strings
@@ -112,8 +138,11 @@ export function distributeImagesToSections(sections, mediaIds, pageIndex = 0) {
     if (s.type === 'hero' && !s.data.backgroundMediaId) {
       sData.data = { ...s.data, backgroundMediaId: next() };
     }
-    if (s.type === 'description' && !s.data.imageMediaId) {
+    if ((s.type === 'description' || s.type === 'city-about') && !s.data.imageMediaId) {
       sData.data = { ...s.data, imageMediaId: next() };
+    }
+    if (s.type === 'city-about' && !s.data.image2MediaId) {
+      sData.data = { ...sData.data, image2MediaId: next() };
     }
     if (s.type === 'why-us' && !s.data.imageMediaId) {
       sData.data = { ...s.data, imageMediaId: next() };

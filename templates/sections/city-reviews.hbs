@@ -1,0 +1,44 @@
+<section class="section section-city-reviews" data-section="city-reviews">
+  <div class="container">
+    {{#if title}}<h2 class="section-title" data-editable="title">{{title}}</h2>{{/if}}
+
+    <div class="city-reviews-header">
+      <div class="city-reviews-subtitle">
+        {{#if subtitle}}<h3 data-editable="subtitle">{{subtitle}}</h3>{{/if}}
+      </div>
+      <div class="city-reviews-score">
+        <span class="city-reviews-score-value">{{rating}}</span>
+        <div class="city-reviews-score-details">
+          <span class="city-reviews-count">{{reviewCount}} reviews</span>
+          <div class="city-reviews-stars">
+            {{#times 5}}<span class="star">&#9733;</span>{{/times}}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="city-reviews-cards">
+      {{#each testimonials}}
+        <div class="city-review-card">
+          <div class="city-review-card-stars">
+            {{#times this.rating}}<span class="star">&#9733;</span>{{/times}}
+          </div>
+          <p class="city-review-card-text">{{this.text}}</p>
+          <div class="city-review-card-footer">
+            <span class="city-review-card-avatar">{{firstLetter this.name}}</span>
+            <span class="city-review-card-author">{{this.name}}</span>
+            {{#if this.isGoogle}}
+              <svg class="city-review-google-icon" width="18" height="18" viewBox="0 0 48 48"><path d="M44 20H24v8h11.3C33.9 34.3 29.5 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6-6C34.5 4.6 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21c10.5 0 20-7.5 20-21 0-1.3-.2-2.7-.5-4z" fill="#4285F4"/><path d="M6.3 14.7l7 5.1C15 16 19.1 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6-6C34.5 4.6 29.6 3 24 3 16.3 3 9.7 7.7 6.3 14.7z" fill="#EA4335"/><path d="M24 45c5.4 0 10.4-1.8 14.3-4.9l-6.6-5.6C29.5 36.2 26.9 37 24 37c-5.4 0-9.9-3.6-11.5-8.5l-6.9 5.3C9 40.1 15.9 45 24 45z" fill="#34A853"/><path d="M44 20H24v8h11.3c-1 3.2-3 5.8-5.6 7.5l6.6 5.6C40.4 37.5 44 31.6 44 24c0-1.3-.2-2.7-.5-4z" fill="#FBBC05"/></svg>
+            {{/if}}
+          </div>
+        </div>
+      {{/each}}
+    </div>
+
+    {{#if ctaText}}
+      <div class="city-reviews-cta">
+        <a href="{{ctaUrl}}" class="btn btn-outline-dark" target="_blank" rel="noopener">{{ctaText}}</a>
+      </div>
+    {{/if}}
+  </div>
+</section>

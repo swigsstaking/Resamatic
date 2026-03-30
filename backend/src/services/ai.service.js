@@ -171,6 +171,42 @@ Génère du contenu engageant pour les sections secondaires. Avis naturels et d�
   return { ...part1, ...part2 };
 }
 
+export async function generateCityPageContent(site, pageConfig) {
+  const { keyword, cityTarget, tone = 'professionnel et chaleureux' } = pageConfig;
+  const biz = site.business || {};
+  const name = biz.name || site.name;
+  const mainCity = biz.city || '';
+  const phone = biz.phone || '';
+  const phoneDisplay = phone ? phone.replace(/(\d{2})(?=\d)/g, '$1 ') : '';
+  const cta = phone ? `Contactez-nous au ${phoneDisplay} >` : 'Contactez-nous >';
+  const ctaUrl = 'contact.html';
+  const h1 = `${keyword} à ${cityTarget}`;
+
+  const sysPrompt = `Tu es un rédacteur web SEO expert pour entreprises locales françaises. Tu crées du contenu pour une page ville ciblant "${cityTarget}" (l'entreprise est basée à ${mainCity}). Style ${tone}. Réponds UNIQUEMENT en JSON valide.`;
+
+  const bizContext = `Entreprise: ${name} | Activité: ${biz.activity || ''} | Ville principale: ${mainCity} | Ville cible: ${cityTarget} | H1 exact: ${h1} | Mot-clé: ${keyword} | Tél: ${phone} | Points forts: ${biz.uniqueSellingPoints || ''} | Description: ${biz.description || ''} | Avis Google: ${biz.googleReviewCount || '?'}+ (${biz.googleReviewRating || '5'}/5)`;
+
+  const prompt = `${bizContext}
+
+Génère du contenu SEO pour une page ville ciblant "${cityTarget}". Le H1 est EXACTEMENT "${h1}" — ne le modifie pas. Adapte le contenu à ${cityTarget} tout en présentant l'entreprise basée à ${mainCity}. JSON:
+{"hero":{"headline":"${h1}","subheadline":"sous-titre 120 car mentionnant ${cityTarget} et l'activité","ctaText":"${cta}","ctaUrl":"${ctaUrl}","bulletPoints":[{"value":"point 1 pertinent pour ${cityTarget}"},{"value":"point 2"},{"value":"point 3"},{"value":"point 4"}]},"cityAbout":{"title":"Qui sommes nous ?","body":"<p>3-4 phrases présentant ${name} et son intervention à ${cityTarget}. Mentionner expertise et proximité.</p><p>2-3 phrases méthode de travail et zones desservies.</p>","ctaText":"${cta}","ctaUrl":"${ctaUrl}"},"ctaBanner":{"text":"accroche forte mentionnant ${cityTarget}","ctaText":"Contactez-nous","ctaUrl":"${ctaUrl}","bannerStyle":"dark"},"cityGuarantee":{"title":"Notre garantie de satisfaction","text":"<p>2-3 phrases engagement qualité de ${name} pour les clients de ${cityTarget}.</p>"},"seo":{"title":"max 60 car, DOIT contenir ${cityTarget}","description":"max 155 car, mentionne ${cityTarget}, engageante avec call-to-action","keywords":["5 mots-clés SEO locaux incluant ${cityTarget}"]}}`;
+
+  const chatOpts = { temperature: 0.7, maxTokens: 3000, timeout: 120000 };
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const raw = await chat(
+        [{ role: 'system', content: sysPrompt }, { role: 'user', content: prompt }],
+        chatOpts
+      );
+      return parseJson(raw);
+    } catch (err) {
+      if (attempt === 1) {
+        console.warn(`[AI] City page generation attempt 1 failed (${err.message}), retrying...`);
+      } else throw err;
+    }
+  }
+}
+
 export async function generateContactContent(site) {
   const biz = site.business || {};
   const name = biz.name || site.name;

@@ -98,7 +98,7 @@ export default function Layout() {
               <LogOut size={18} />
             </button>
           </div>
-          <span className="text-xs text-gray-400 mt-1 block">v0.2.2</span>
+          <span className="text-xs text-gray-400 mt-1 block">v0.2.3</span>
         </div>
       </aside>
 

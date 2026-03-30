@@ -16,6 +16,8 @@ export default function PagesListPage() {
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [deleteModal, setDeleteModal] = useState(null);
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
 
   const fetchPages = async () => {
     try {
@@ -26,12 +28,14 @@ export default function PagesListPage() {
 
   useEffect(() => { fetchPages(); }, [siteId]);
 
-  const handleDelete = async (id, title) => {
-    if (!confirm(`Supprimer "${title}" ?`)) return;
+  const handleDelete = async () => {
+    if (!deleteModal || !deleteConfirmed) return;
     try {
-      await pagesApi.delete(id);
-      trackEvent('page_deleted', { site_id: siteId, page_title: title });
+      await pagesApi.delete(deleteModal._id);
+      trackEvent('page_deleted', { site_id: siteId, page_title: deleteModal.title });
       toast.success('Page supprimée');
+      setDeleteModal(null);
+      setDeleteConfirmed(false);
       fetchPages();
     } catch { toast.error('Erreur'); }
   };
@@ -105,8 +109,8 @@ export default function PagesListPage() {
                   </Link>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs text-gray-400">/{page.slug}.html</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${page.type === 'homepage' ? 'bg-blue-100 text-blue-600' : page.type === 'contact' ? 'bg-green-100 text-green-600' : page.type === 'legal' ? 'bg-gray-100 text-gray-500' : 'bg-purple-100 text-purple-600'}`}>
-                      {page.type}
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${page.type === 'homepage' ? 'bg-blue-100 text-blue-600' : page.type === 'contact' ? 'bg-green-100 text-green-600' : page.type === 'legal' ? 'bg-gray-100 text-gray-500' : page.type === 'city' ? 'bg-orange-100 text-orange-600' : 'bg-purple-100 text-purple-600'}`}>
+                      {page.type === 'city' ? 'ville' : page.type}
                     </span>
                     {page.isMainHomepage && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-600">index</span>}
                   </div>
@@ -115,13 +119,50 @@ export default function PagesListPage() {
               <div className="flex items-center gap-2">
                 <Link to={`/sites/${siteId}/pages/${page._id}`} className="text-sm text-accent hover:underline">Éditer</Link>
                 {isAdmin && (
-                  <button onClick={() => handleDelete(page._id, page.title)} className="text-gray-400 hover:text-danger" aria-label={`Supprimer ${page.title}`}>
+                  <button onClick={() => setDeleteModal(page)} className="text-gray-400 hover:text-danger" aria-label={`Supprimer ${page.title}`}>
                     <Trash2 size={16} />
                   </button>
                 )}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal de confirmation de suppression */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { setDeleteModal(null); setDeleteConfirmed(false); }}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+              <Trash2 size={22} className="text-red-600" />
+            </div>
+            <h2 className="text-lg font-bold text-primary text-center mb-2">Supprimer la page</h2>
+            <p className="text-sm text-gray-500 text-center mb-2">
+              Supprimer <strong>"{deleteModal.title}"</strong> ?
+            </p>
+            <p className="text-xs text-gray-400 text-center mb-4">Cette action est irréversible.</p>
+            <label className={`flex items-center gap-3 mb-5 px-4 py-3 rounded-lg cursor-pointer select-none border transition-colors ${deleteConfirmed ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200 hover:border-gray-300'}`}>
+              <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 border-2 transition-colors ${deleteConfirmed ? 'bg-red-600 border-red-600' : 'border-gray-300 bg-white'}`}>
+                {deleteConfirmed && (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                )}
+              </div>
+              <input type="checkbox" checked={deleteConfirmed} onChange={e => setDeleteConfirmed(e.target.checked)} className="sr-only" />
+              <span className={`text-sm font-medium ${deleteConfirmed ? 'text-red-700' : 'text-gray-600'}`}>Je confirme vouloir supprimer cette page</span>
+            </label>
+            <div className="flex gap-3">
+              <button onClick={() => { setDeleteModal(null); setDeleteConfirmed(false); }} className="flex-1 px-4 py-2.5 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium">
+                Annuler
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={!deleteConfirmed}
+                className={`flex-1 px-4 py-2.5 text-sm text-white rounded-lg font-medium transition-colors ${deleteConfirmed ? 'bg-red-600 hover:bg-red-700' : 'bg-red-300 cursor-not-allowed'}`}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

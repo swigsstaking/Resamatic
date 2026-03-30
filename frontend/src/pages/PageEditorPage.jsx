@@ -28,6 +28,9 @@ const SECTION_META = {
   'faq':              { label: 'FAQ',                 icon: HelpCircle },
   'team':             { label: 'Équipe',             icon: Users },
   'map':              { label: 'Carte',               icon: MapPin },
+  'city-about':       { label: 'Qui sommes nous',     icon: FileText },
+  'city-guarantee':   { label: 'Garantie (ville)',    icon: Shield },
+  'city-reviews':     { label: 'Avis (ville)',        icon: Star },
 };
 
 function getSectionMeta(type) {
@@ -826,6 +829,9 @@ function SectionEditor({ section, idx, onChange, onAIRewrite, onMediaPick, site 
     case 'faq': return <>{colorBar}{text("Titre", "title")}{list("Questions", "items", [{key:'question',label:'Question'},{key:'answer',label:'Réponse',multiline:true}], "Question")}</>;
     case 'team': return <>{colorBar}{text("Titre", "title")}{richText("Contenu", "body")}{image("Image", "imageMediaId")}{list("Membres", "members", [{key:'name',label:'Nom'},{key:'role',label:'Rôle'},{key:'bio',label:'Bio',multiline:true}], "Membre")}</>;
     case 'map': return <>{colorBar}{text("Titre", "title")}{text("Adresse", "address")}{text("Horaires", "hours")}{text("Téléphone", "phone")}{text("Email", "email")}{text("URL Google Maps", "embedUrl", { multiline: true })}</>;
+    case 'city-about': return <>{colorBar}{text("Titre", "title")}{richText("Contenu", "body")}{image("Image gauche", "imageMediaId")}{image("Image droite", "image2MediaId")}{text("Texte du bouton", "ctaText")}{text("Lien du bouton", "ctaUrl")}</>;
+    case 'city-guarantee': return <>{colorBar}{text("Titre", "title")}{richText("Texte", "text")}</>;
+    case 'city-reviews': return <>{colorBar}{text("Titre", "title")}{text("Sous-titre", "subtitle")}{text("Nombre d'avis", "reviewCount")}{text("Note", "rating")}<button disabled={fetchingReviews} onClick={async () => { try { setFetchingReviews(true); const res = await sitesApi.fetchGoogleReviews(site._id); onChange(idx, 'testimonials', res.reviews.map(r => ({ ...r, isGoogle: true }))); onChange(idx, 'reviewCount', res.totalReviews); onChange(idx, 'rating', res.rating); if (res.googleMapsUri) onChange(idx, 'ctaUrl', res.googleMapsUri); toast.success(`${res.reviews.length} avis Google importés`); } catch (err) { toast.error(err.response?.data?.error || err.message); } finally { setFetchingReviews(false); } }} className="w-full mb-2.5 px-3 py-1.5 text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 disabled:opacity-50 flex items-center justify-center gap-1.5">{fetchingReviews ? <><Loader2 size={11} className="animate-spin" /> Import en cours...</> : <><RefreshCw size={11} /> Importer les avis Google</>}</button>{text("Texte du bouton", "ctaText")}{text("Lien des avis", "ctaUrl")}</>;
     default: return <p className="text-xs text-gray-400 text-center py-4">Section non éditable</p>;
   }
 }

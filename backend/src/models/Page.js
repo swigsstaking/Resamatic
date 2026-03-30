@@ -8,6 +8,7 @@ const sectionSchema = new mongoose.Schema({
       'hero', 'text-highlight', 'description', 'why-us', 'google-reviews', 'cta-banner',
       'services-grid', 'guarantee', 'testimonials',
       'faq', 'team', 'map',
+      'city-about', 'city-guarantee', 'city-reviews',
     ],
   },
   order: { type: Number, required: true },
@@ -19,8 +20,9 @@ const pageSchema = new mongoose.Schema({
   siteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Site', required: true, index: true },
   title: { type: String, required: true, trim: true },
   slug: { type: String, required: true, trim: true },
-  type: { type: String, enum: ['homepage', 'subpage', 'contact', 'legal'], required: true },
+  type: { type: String, enum: ['homepage', 'subpage', 'contact', 'legal', 'city'], required: true },
   isMainHomepage: { type: Boolean, default: false },
+  cityTarget: { type: String, trim: true, default: '' },
 
   // SEO
   seo: {

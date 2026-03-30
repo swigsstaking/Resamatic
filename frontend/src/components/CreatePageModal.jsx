@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Plus, X, Sparkles, Image, Loader, Check, Upload } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, X, Sparkles, Image, Loader, Check, Upload, MapPin } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 import { pagesApi, aiApi, mediaApi } from '../services/api';
-import { mapAiContentToSections, distributeImagesToSections } from '../lib/aiPageBuilder';
+import { mapAiContentToSections, mapCityAiContentToSections, distributeImagesToSections } from '../lib/aiPageBuilder';
 
 export default function CreatePageModal({ siteId, site, isAdmin, existingPages, onCreated, onClose }) {
   const [pageList, setPageList] = useState([{ title: '', type: 'subpage', keyword: '', serviceFocus: '' }]);
@@ -13,6 +13,15 @@ export default function CreatePageModal({ siteId, site, isAdmin, existingPages, 
   const [loading, setLoading] = useState(false);
   const [aiStep, setAiStep] = useState('');
   const [progress, setProgress] = useState(0);
+  const [activeMode, setActiveMode] = useState('standard');
+  const [cityTarget, setCityTarget] = useState('');
+
+  const homepageKeyword = useMemo(() => {
+    const hp = (existingPages || []).find(p => p.isMainHomepage || p.type === 'homepage');
+    if (!hp) return '';
+    const heroSection = hp.sections?.find(s => s.type === 'hero');
+    return heroSection?.data?.headline || hp.seo?.title || hp.title || '';
+  }, [existingPages]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -139,6 +148,73 @@ export default function CreatePageModal({ siteId, site, isAdmin, existingPages, 
     }
   };
 
+  const handleCreateCityPageWithAI = async () => {
+    if (!cityTarget.trim() || !homepageKeyword) return;
+    setLoading(true);
+    setAiStep('Création de la page ville...');
+    setProgress(20);
+
+    try {
+      const pageTitle = `${homepageKeyword} à ${cityTarget.trim()}`;
+
+      // 1. Create the page (controller auto-populates sections + services from subpages)
+      const result = await pagesApi.create(siteId, {
+        title: pageTitle,
+        keyword: homepageKeyword,
+        cityTarget: cityTarget.trim(),
+        type: 'city',
+      });
+      const createdPage = result.page;
+
+      // 2. Upload new images if any
+      let allMediaIds = [...selectedMediaIds];
+      if (newImages.length > 0) {
+        for (const img of newImages) {
+          try {
+            const fd = new FormData();
+            fd.append('image', img.file);
+            const res = await mediaApi.upload(siteId, fd);
+            if (res.media?._id) allMediaIds.push(res.media._id);
+          } catch {}
+        }
+      }
+
+      // 3. AI generation for city page
+      setAiStep(`IA — ${pageTitle}...`);
+      setProgress(50);
+      try {
+        const { content } = await aiApi.generateCityPage({
+          siteId,
+          keyword: homepageKeyword,
+          cityTarget: cityTarget.trim(),
+        });
+
+        let sections = mapCityAiContentToSections(createdPage.sections, content);
+        sections = distributeImagesToSections(sections, allMediaIds, existingPages.length);
+
+        // Force exact H1
+        const hero = sections.find(s => s.type === 'hero');
+        if (hero) hero.data.headline = pageTitle;
+
+        await pagesApi.updateSections(createdPage._id, sections);
+        if (content.seo) await pagesApi.update(createdPage._id, { seo: content.seo });
+      } catch (err) {
+        console.error('City page AI generation error:', err);
+        toast.error('Erreur IA pour la page ville');
+      }
+
+      setProgress(100);
+      setAiStep('Terminé !');
+      toast.success(`Page ville "${cityTarget.trim()}" créée`);
+      setTimeout(() => onCreated(), 1000);
+    } catch (err) {
+      console.error('Create city page error:', err);
+      toast.error('Erreur lors de la création de la page ville');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const hasKeyword = pageList.some(p => p.keyword.trim());
   const hasTitle = pageList.some(p => p.title.trim());
 
@@ -166,8 +242,42 @@ export default function CreatePageModal({ siteId, site, isAdmin, existingPages, 
         {/* Form */}
         {!loading && (
           <div className="p-6 space-y-6">
-            {/* Pages list */}
-            <div>
+            {/* Mode toggle */}
+            {isAdmin && existingPages?.length > 0 && (
+              <div className="flex gap-2">
+                <button onClick={() => setActiveMode('standard')}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${activeMode === 'standard' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  Page standard
+                </button>
+                <button onClick={() => setActiveMode('city')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${activeMode === 'city' ? 'bg-accent text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  <MapPin size={13} /> Page ville
+                </button>
+              </div>
+            )}
+
+            {/* City page form */}
+            {activeMode === 'city' && (
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Mot-clé (depuis la page d'accueil)</label>
+                  <input value={homepageKeyword} disabled
+                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white text-gray-400 cursor-not-allowed" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Ville cible *</label>
+                  <input value={cityTarget} onChange={e => setCityTarget(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                    placeholder="Ex: Blagnac, Plaisance-du-Touch..." autoFocus />
+                </div>
+                <p className="text-xs text-gray-400">
+                  H1 généré : <strong className="text-gray-600">{homepageKeyword ? `${homepageKeyword} à ${cityTarget || '...'}` : '(mot-clé manquant)'}</strong>
+                </p>
+              </div>
+            )}
+
+            {/* Standard pages list */}
+            {activeMode === 'standard' && <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Pages à créer</h3>
               <div className="space-y-4">
                 {pageList.map((p, i) => (
@@ -214,7 +324,7 @@ export default function CreatePageModal({ siteId, site, isAdmin, existingPages, 
               <button onClick={addPage} className="mt-3 flex items-center gap-2 text-sm text-accent hover:underline">
                 <Plus size={14} /> Ajouter une page
               </button>
-            </div>
+            </div>}
 
             {/* Image selection — admin only */}
             {isAdmin && siteMedia.length > 0 && (
@@ -269,15 +379,26 @@ export default function CreatePageModal({ siteId, site, isAdmin, existingPages, 
             <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">
               Annuler
             </button>
-            <button onClick={handleCreateWithoutAI} disabled={!hasTitle}
-              className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50">
-              Créer sans IA
-            </button>
-            {isAdmin && (
-              <button onClick={handleCreateWithAI} disabled={!hasKeyword}
-                className="flex items-center gap-2 px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50">
-                <Sparkles size={14} /> Créer avec IA
-              </button>
+            {activeMode === 'city' ? (
+              isAdmin && (
+                <button onClick={handleCreateCityPageWithAI} disabled={!cityTarget.trim() || !homepageKeyword}
+                  className="flex items-center gap-2 px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50">
+                  <Sparkles size={14} /> Créer la page ville
+                </button>
+              )
+            ) : (
+              <>
+                <button onClick={handleCreateWithoutAI} disabled={!hasTitle}
+                  className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50">
+                  Créer sans IA
+                </button>
+                {isAdmin && (
+                  <button onClick={handleCreateWithAI} disabled={!hasKeyword}
+                    className="flex items-center gap-2 px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50">
+                    <Sparkles size={14} /> Créer avec IA
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}

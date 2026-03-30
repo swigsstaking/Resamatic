@@ -74,6 +74,20 @@ export const optimizeSeo = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+export const generateCityPage = async (req, res, next) => {
+  try {
+    const { siteId, keyword, cityTarget } = req.body;
+    if (!siteId || !keyword || !cityTarget) {
+      return res.status(400).json({ error: 'siteId, keyword, and cityTarget are required' });
+    }
+    const site = await Site.findById(siteId).lean();
+    if (!site) return res.status(404).json({ error: 'Site not found' });
+
+    const content = await aiService.generateCityPageContent(site, { keyword, cityTarget });
+    res.json({ content });
+  } catch (err) { next(err); }
+};
+
 export const rewrite = async (req, res, next) => {
   try {
     const { text, instruction } = req.body;

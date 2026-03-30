@@ -78,6 +78,7 @@ export const aiApi = {
   optimizeSeo: (siteId) => api.post('/ai/optimize-seo', { siteId }),
   rewrite: (data) => api.post('/ai/rewrite', data),
   generateAlt: (data) => api.post('/ai/generate-alt', data),
+  generateCityPage: (data) => api.post('/ai/generate-city-page', data),
 };
 
 export const adminApi = {

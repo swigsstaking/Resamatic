@@ -23,6 +23,16 @@ const DEFAULT_SECTIONS = [
   { type: 'map', order: 11, data: { title: 'Nous trouver', embedUrl: '', address: '', phone: '', email: '', style: { backgroundColor: '', textColor: '' } } },
 ];
 
+const DEFAULT_CITY_SECTIONS = [
+  { type: 'hero', order: 0, data: { headline: '', subheadline: '', ctaText: '', ctaUrl: 'contact.html', backgroundMediaId: null, overlayOpacity: 0.5, style: { backgroundColor: '', textColor: '' } } },
+  { type: 'city-about', order: 1, data: { title: 'Qui sommes nous ?', body: '', imageMediaId: null, image2MediaId: null, ctaText: '', ctaUrl: 'contact.html', style: { backgroundColor: '', textColor: '' } } },
+  { type: 'services-grid', order: 2, data: { title: 'Nos services', subtitle: '', services: [], style: { backgroundColor: '', textColor: '' } } },
+  { type: 'cta-banner', order: 3, data: { text: '', ctaText: 'Contactez-nous', ctaUrl: 'contact.html', bannerStyle: 'dark', style: { backgroundColor: '', textColor: '' } } },
+  { type: 'city-guarantee', order: 4, data: { title: 'Notre garantie de satisfaction', text: '', percentage: 100, style: { backgroundColor: '', textColor: '' } } },
+  { type: 'city-reviews', order: 5, data: { title: 'Témoignages', subtitle: 'Nos avis Google', reviewCount: 0, rating: 5, ctaText: 'Consulter tous nos avis', ctaUrl: '', testimonials: [], style: { backgroundColor: '', textColor: '' } } },
+  { type: 'map', order: 6, data: { title: 'Nous trouver', embedUrl: '', address: '', phone: '', email: '', style: { backgroundColor: '', textColor: '' } } },
+];
+
 const DEFAULT_CONTACT_SECTIONS = [
   { type: 'hero', order: 0, data: { headline: 'Contactez-nous', subheadline: '', ctaText: '', ctaUrl: '', backgroundMediaId: null, overlayOpacity: 0.5, style: { backgroundColor: '', textColor: '' } } },
   { type: 'testimonials', order: 1, data: { title: 'Ce que nos clients en pensent', items: [], style: { backgroundColor: '', textColor: '' } } },
@@ -58,6 +68,8 @@ export const create = async (req, res, next) => {
     if (!data.sections?.length) {
       if (data.type === 'contact') {
         data.sections = JSON.parse(JSON.stringify(DEFAULT_CONTACT_SECTIONS));
+      } else if (data.type === 'city') {
+        data.sections = JSON.parse(JSON.stringify(DEFAULT_CITY_SECTIONS));
       } else if (data.type === 'homepage' || data.type === 'subpage') {
         data.sections = JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
       }
@@ -103,6 +115,17 @@ export const create = async (req, res, next) => {
           case 'guarantee':
             section.data.text = `Chez ${biz.name || 'nous'}, votre satisfaction est notre priorité.`;
             break;
+          case 'city-about':
+            section.data.title = 'Qui sommes nous ?';
+            section.data.body = `<p>Découvrez ${biz.name || 'notre entreprise'}, spécialisé dans ${biz.activity ? biz.activity.toLowerCase() : 'nos services'}.</p>`;
+            break;
+          case 'city-reviews':
+            section.data.reviewCount = biz.googleReviewCount || 0;
+            section.data.rating = biz.googleReviewRating || 5;
+            break;
+          case 'city-guarantee':
+            section.data.text = `Chez ${biz.name || 'nous'}, votre satisfaction est notre priorité.`;
+            break;
           case 'map':
             section.data.address = biz.address || '';
             section.data.phone = biz.phone || '';
@@ -111,6 +134,36 @@ export const create = async (req, res, next) => {
               section.data.embedUrl = buildMapsEmbedUrl(biz.address, biz.city, biz.zip);
             }
             break;
+        }
+      }
+
+      // City pages: populate services-grid from subpages + google-reviews from homepage
+      if (data.type === 'city') {
+        const subpages = await Page.find({ siteId: data.siteId, type: 'subpage' }).lean();
+        const servicesSection = data.sections.find(s => s.type === 'services-grid');
+        if (servicesSection && subpages.length) {
+          const cityTargetStr = data.cityTarget ? ` à ${data.cityTarget}` : '';
+          servicesSection.data.title = `Nos services${cityTargetStr}`;
+          servicesSection.data.services = subpages.slice(0, 6).map(p => ({
+            name: p.title,
+            shortDescription: '',
+            linkUrl: `${p.slug}.html`,
+            imageMediaId: null,
+          }));
+        }
+
+        // Copy google-reviews data from homepage into city-reviews
+        const homepage = await Page.findOne({ siteId: data.siteId, type: 'homepage', isMainHomepage: true }).lean();
+        if (homepage) {
+          const hpReviews = homepage.sections?.find(s => s.type === 'google-reviews');
+          const cityReviews = data.sections.find(s => s.type === 'city-reviews');
+          if (hpReviews && cityReviews) {
+            cityReviews.data.testimonials = hpReviews.data.testimonials || [];
+            cityReviews.data.reviewCount = hpReviews.data.reviewCount || biz.googleReviewCount || 0;
+            cityReviews.data.rating = hpReviews.data.rating || biz.googleReviewRating || 5;
+            cityReviews.data.ctaUrl = hpReviews.data.ctaUrl || '';
+            cityReviews.data.ctaText = hpReviews.data.ctaText || 'Consulter tous nos avis';
+          }
         }
       }
     }
@@ -126,7 +179,7 @@ export const update = async (req, res, next) => {
     if (req.user.role === 'client' && !req.user.assignedSites.some(id => id.toString() === page.siteId.toString())) {
       return res.status(403).json({ error: 'Access denied' });
     }
-    const allowed = ['title', 'slug', 'type', 'sortOrder', 'isMainHomepage', 'seo', 'sections', 'visible'];
+    const allowed = ['title', 'slug', 'type', 'sortOrder', 'isMainHomepage', 'seo', 'sections', 'visible', 'cityTarget'];
     for (const key of Object.keys(req.body)) {
       if (allowed.includes(key)) page[key] = req.body[key];
     }
