@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Globe, Pencil, Eye, Trash2, Copy, ExternalLink, Search, X } from 'lucide-react';
+import { Plus, Globe, Pencil, Eye, Trash2, Copy, ExternalLink, Search, X, CloudOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useSiteStore from '../stores/siteStore';
 import { useIsAdmin } from '../stores/authStore';
@@ -45,6 +45,16 @@ export default function DashboardPage() {
       setDeleteModal(null);
       setDeleteConfirmed(false);
     } catch { toast.error('Erreur lors de la suppression'); }
+  };
+
+  const handleUnpublish = async (site) => {
+    if (!confirm(`Dépublier ${site.name} ? Le site ne sera plus accessible en ligne.`)) return;
+    try {
+      await deployApi.unpublish(site._id);
+      trackEvent('site_unpublished', { site_id: site._id, site_name: site.name });
+      fetchSites();
+      toast.success('Site dépublié');
+    } catch { toast.error('Erreur lors de la dépublication'); }
   };
 
   const handleDuplicate = async (id) => {
@@ -146,6 +156,11 @@ export default function DashboardPage() {
                     <a href={`https://${site.domain}`} target="_blank" rel="noopener" className="text-gray-400 hover:text-accent" aria-label={`Voir ${site.domain}`}>
                       <ExternalLink size={16} />
                     </a>
+                  )}
+                  {isAdmin && site.status === 'published' && (
+                    <button onClick={() => handleUnpublish(site)} className="text-gray-400 hover:text-orange-500" title="Dépublier" aria-label={`Dépublier ${site.name}`}>
+                      <CloudOff size={16} />
+                    </button>
                   )}
                 </div>
                 {isAdmin && (
