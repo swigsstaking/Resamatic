@@ -1,6 +1,5 @@
 <section class="section section-city-about" data-section="city-about">
   <div class="container">
-    {{#if title}}<h2 class="section-title" data-editable="title">{{title}}</h2>{{/if}}
     <div class="city-about-layout">
       <div class="city-about-left">
         {{#if imageUrl}}
@@ -32,7 +31,9 @@
         {{/if}}
       </div>
       <div class="city-about-right">
-        {{#if body}}<div class="city-about-body" data-editable="body">{{{body}}}</div>{{/if}}
+        {{#if title}}<h2 class="city-about-title" data-editable="title">{{title}}</h2>{{/if}}
+        <span class="city-about-divider"></span>
+        {{#if body}}<div class="city-about-body city-about-dropcap" data-editable="body">{{{body}}}</div>{{/if}}
         {{#if ctaText}}<a href="{{ctaUrl}}" class="btn btn-accent">{{ctaText}}</a>{{/if}}
       </div>
     </div>
