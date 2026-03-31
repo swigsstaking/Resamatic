@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('');
   const [deleteModal, setDeleteModal] = useState(null);
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
+  const [unpublishModal, setUnpublishModal] = useState(null);
 
   useEffect(() => { fetchSites(); }, []);
 
@@ -47,13 +48,14 @@ export default function DashboardPage() {
     } catch { toast.error('Erreur lors de la suppression'); }
   };
 
-  const handleUnpublish = async (site) => {
-    if (!confirm(`Dépublier ${site.name} ? Le site ne sera plus accessible en ligne.`)) return;
+  const handleUnpublish = async () => {
+    if (!unpublishModal) return;
     try {
-      await deployApi.unpublish(site._id);
-      trackEvent('site_unpublished', { site_id: site._id, site_name: site.name });
+      await deployApi.unpublish(unpublishModal._id);
+      trackEvent('site_unpublished', { site_id: unpublishModal._id, site_name: unpublishModal.name });
       fetchSites();
       toast.success('Site dépublié');
+      setUnpublishModal(null);
     } catch { toast.error('Erreur lors de la dépublication'); }
   };
 
@@ -158,7 +160,7 @@ export default function DashboardPage() {
                     </a>
                   )}
                   {isAdmin && site.status === 'published' && (
-                    <button onClick={() => handleUnpublish(site)} className="text-gray-400 hover:text-orange-500" title="Dépublier" aria-label={`Dépublier ${site.name}`}>
+                    <button onClick={() => setUnpublishModal(site)} className="text-gray-400 hover:text-orange-500" title="Dépublier" aria-label={`Dépublier ${site.name}`}>
                       <CloudOff size={16} />
                     </button>
                   )}
@@ -210,6 +212,35 @@ export default function DashboardPage() {
                 className={`flex-1 px-4 py-2.5 text-sm text-white rounded-lg font-medium transition-colors ${deleteConfirmed ? 'bg-red-600 hover:bg-red-700' : 'bg-red-300 cursor-not-allowed'}`}
               >
                 Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmation de dépublication */}
+      {unpublishModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setUnpublishModal(null)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-orange-100 rounded-full">
+              <CloudOff size={22} className="text-orange-600" />
+            </div>
+            <h2 className="text-lg font-bold text-primary text-center mb-2">Dépublier le site</h2>
+            <p className="text-sm text-gray-500 text-center mb-2">
+              Retirer <strong>"{unpublishModal.name}"</strong> de la mise en ligne ?
+            </p>
+            {unpublishModal.domain && (
+              <p className="text-sm text-orange-600 text-center mb-2">
+                <strong>{unpublishModal.domain}</strong> ne sera plus accessible.
+              </p>
+            )}
+            <p className="text-xs text-gray-400 text-center mb-5">Le site reste dans Resamatic et peut être republié à tout moment.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setUnpublishModal(null)} className="flex-1 px-4 py-2.5 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium">
+                Annuler
+              </button>
+              <button onClick={handleUnpublish} className="flex-1 px-4 py-2.5 text-sm text-white bg-orange-500 hover:bg-orange-600 rounded-lg font-medium transition-colors">
+                Dépublier
               </button>
             </div>
           </div>
