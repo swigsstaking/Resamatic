@@ -175,6 +175,16 @@ export async function deploySite(siteId) {
       await recordFirstDeployment(site);
     }
 
+    // 8. Ping search engines with sitemap
+    try {
+      const sitemapUrl = `https://${site.domain}/sitemap.xml`;
+      await Promise.allSettled([
+        fetch(`https://www.google.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`),
+        fetch(`https://www.bing.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`),
+      ]);
+      console.log('[deploy] Pinged search engines with sitemap');
+    } catch {}
+
     return { success: true, url: `https://${site.domain}` };
   } catch (err) {
     await Site.findByIdAndUpdate(siteId, {
