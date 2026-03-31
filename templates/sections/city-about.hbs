@@ -19,21 +19,11 @@
             <span style="color:#9ca3af;font-size:0.75rem;">Image</span>
           </div>
         {{/if}}
-        {{#if mapEmbedUrl}}
-          <iframe
-            src="{{mapEmbedUrl}}"
-            class="city-about-map"
-            allowfullscreen=""
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-            title="Carte Google Maps"
-          ></iframe>
-        {{/if}}
       </div>
       <div class="city-about-right">
         {{#if title}}<h2 class="city-about-title" data-editable="title">{{title}}</h2>{{/if}}
         <span class="city-about-divider"></span>
-        {{#if body}}<div class="city-about-body city-about-dropcap" data-editable="body">{{{body}}}</div>{{/if}}
+        {{#if body}}<div class="city-about-body" data-editable="body">{{{body}}}</div>{{/if}}
         {{#if ctaText}}<a href="{{ctaUrl}}" class="btn btn-accent">{{ctaText}}</a>{{/if}}
       </div>
     </div>
