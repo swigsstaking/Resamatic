@@ -10,6 +10,23 @@ import Media from '../models/Media.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.join(__dirname, '../../../templates');
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+const FONTS_DIR = path.join(TEMPLATES_DIR, 'fonts');
+
+// Font metadata for self-hosted Google Fonts
+const FONT_META = {
+  'Playfair Display': { slug: 'playfair-display', category: 'serif', weights: [400, 700] },
+  'Montserrat':       { slug: 'montserrat',       category: 'sans-serif', weights: [400, 700] },
+  'Lora':             { slug: 'lora',              category: 'serif', weights: [400, 700] },
+  'Merriweather':     { slug: 'merriweather',      category: 'serif', weights: [400, 700] },
+  'Poppins':          { slug: 'poppins',           category: 'sans-serif', weights: [400, 700] },
+  'Raleway':          { slug: 'raleway',           category: 'sans-serif', weights: [400, 700] },
+  'Inter':            { slug: 'inter',             category: 'sans-serif', weights: [300, 400, 500, 600] },
+  'Open Sans':        { slug: 'open-sans',         category: 'sans-serif', weights: [300, 400, 500, 600] },
+  'Lato':             { slug: 'lato',              category: 'sans-serif', weights: [300, 400, 500, 600] },
+  'Roboto':           { slug: 'roboto',            category: 'sans-serif', weights: [300, 400, 500, 600] },
+  'Source Sans Pro':  { slug: 'source-sans-pro',   category: 'sans-serif', weights: [300, 400, 500, 600] },
+  'Nunito':           { slug: 'nunito',            category: 'sans-serif', weights: [300, 400, 500, 600] },
+};
 
 // Cache compiled templates
 let templatesCompiled = false;
@@ -95,13 +112,39 @@ function generateCssVars(design) {
   --color-accent: ${design.accentColor || '#c8a97e'};
   --color-bg: ${design.backgroundColor || '#ffffff'};
   --color-text: ${design.textColor || '#333333'};
-  --font-heading: '${design.fontHeading || 'Playfair Display'}', serif;
-  --font-body: '${design.fontBody || 'Inter'}', sans-serif;
+  --font-heading: '${design.fontHeading || 'Playfair Display'}', ${FONT_META[design.fontHeading]?.category || 'serif'};
+  --font-body: '${design.fontBody || 'Inter'}', ${FONT_META[design.fontBody]?.category || 'sans-serif'};
   --radius-sm: ${isSquare ? '2px' : '8px'};
   --radius-md: ${isSquare ? '4px' : '16px'};
   --radius-lg: ${isSquare ? '6px' : '20px'};
   --radius-pill: ${isSquare ? '4px' : '50px'};
 }`;
+}
+
+function generateFontFaceCss(fontHeading, fontBody) {
+  const fontsUsed = new Set([fontHeading, fontBody]);
+  let css = '';
+  for (const fontName of fontsUsed) {
+    const meta = FONT_META[fontName];
+    if (!meta) continue;
+    for (const weight of meta.weights) {
+      css += `@font-face{font-family:'${fontName}';font-style:normal;font-weight:${weight};font-display:swap;src:url('fonts/${meta.slug}-${weight}.woff2') format('woff2')}\n`;
+    }
+  }
+  return css;
+}
+
+function generateFontPreloads(fontHeading, fontBody) {
+  const headingMeta = FONT_META[fontHeading];
+  const bodyMeta = FONT_META[fontBody];
+  let html = '';
+  if (headingMeta) {
+    html += `<link rel="preload" as="font" type="font/woff2" href="fonts/${headingMeta.slug}-700.woff2" crossorigin>\n`;
+  }
+  if (bodyMeta && bodyMeta.slug !== headingMeta?.slug) {
+    html += `  <link rel="preload" as="font" type="font/woff2" href="fonts/${bodyMeta.slug}-400.woff2" crossorigin>\n`;
+  }
+  return html;
 }
 
 function generateJsonLd(site, page) {
@@ -272,6 +315,22 @@ export async function buildSite(siteId) {
     await fs.writeFile(path.join(buildDir, 'main.css'), generateCssVars(site.design));
   }
 
+  // Copy self-hosted font files (only the 2 fonts used by this site)
+  const fontHeading = site.design.fontHeading || 'Playfair Display';
+  const fontBody = site.design.fontBody || 'Inter';
+  const fontsOutDir = path.join(buildDir, 'fonts');
+  try { await fs.rm(fontsOutDir, { recursive: true, force: true }); } catch {}
+  await fs.mkdir(fontsOutDir, { recursive: true });
+  const fontsUsed = new Set([fontHeading, fontBody]);
+  for (const fontName of fontsUsed) {
+    const meta = FONT_META[fontName];
+    if (!meta) continue;
+    for (const weight of meta.weights) {
+      const filename = `${meta.slug}-${weight}.woff2`;
+      try { await fs.copyFile(path.join(FONTS_DIR, filename), path.join(fontsOutDir, filename)); } catch {}
+    }
+  }
+
   // Copy media files to build
   for (const media of allMedia) {
     for (const variant of media.variants) {
@@ -429,7 +488,8 @@ export async function buildSite(siteId) {
       page,
       sections: renderedSections.join('\n'),
       jsonLd: jsonLd.map(ld => JSON.stringify(ld)).join('</script>\n<script type="application/ld+json">'),
-      cssVars: generateCssVars(site.design),
+      cssVars: generateFontFaceCss(fontHeading, fontBody) + generateCssVars(site.design),
+      fontPreloads: generateFontPreloads(fontHeading, fontBody),
       allPages: pages,
       faviconType,
       showLegalLinks: site.footer?.showLegalLinks !== false,

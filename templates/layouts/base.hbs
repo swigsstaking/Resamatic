@@ -24,11 +24,8 @@
 
   {{#if heroImagePreload}}<link rel="preload" as="image" href="{{heroImagePreload}}" type="image/webp"{{#if heroImageSrcset}} imagesrcset="{{heroImageSrcset}}" imagesizes="(max-width: 768px) 100vw, 50vw"{{/if}}>{{/if}}
 
-  <!-- Fonts (non-render-blocking) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family={{encodeURI site.design.fontHeading}}:wght@400;700&family={{encodeURI site.design.fontBody}}:wght@300;400;500;600&display=swap">
-  <link href="https://fonts.googleapis.com/css2?family={{encodeURI site.design.fontHeading}}:wght@400;700&family={{encodeURI site.design.fontBody}}:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <!-- Font preloads (self-hosted woff2) -->
+  {{{fontPreloads}}}
 
   <!-- Favicon -->
   {{#if site.design.faviconMediaId}}
