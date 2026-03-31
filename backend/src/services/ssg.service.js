@@ -392,6 +392,19 @@ export async function buildSite(siteId) {
             googleReviews: allTestimonials.filter(t => t.isGoogle),
           };
         }
+        if (section.type === 'testimonials') {
+          // Prioritize real Google reviews over AI-generated ones
+          const grSection = page.sections.find(s => s.type === 'google-reviews');
+          const googleReviews = (grSection?.data?.testimonials || []).filter(t => t.isGoogle);
+          if (googleReviews.length > 0) {
+            const aiItems = sectionData.items || [];
+            // Google reviews first, then fill with AI if needed
+            sectionData.items = [
+              ...googleReviews.map(r => ({ name: r.name, text: r.text, rating: r.rating, location: r.publishedAt || '' })),
+              ...aiItems,
+            ].slice(0, Math.max(aiItems.length, 3));
+          }
+        }
         if (section.type === 'city-about') {
           const biz = site.business || {};
           if (biz.name && biz.city) {
