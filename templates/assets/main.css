@@ -632,6 +632,10 @@
   line-height: 1.7;
   color: #444;
   font-size: 0.95rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .testimonial-card cite {
   font-style: normal;
